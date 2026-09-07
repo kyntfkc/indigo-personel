@@ -38,8 +38,9 @@ export default async function AyarlarPage() {
 
         <div className="grid gap-6 lg:grid-cols-2">
           <WorkStartForm workStart={workStart} />
-          <HolidaysPanel holidays={holidays} />
         </div>
+
+        <HolidaysPanel holidays={holidays} />
 
         <div className="grid gap-6 lg:grid-cols-2">
           <AdminCreateForm />

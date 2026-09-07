@@ -1,10 +1,21 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { format, parseISO } from "date-fns";
+import {
+  addMonths,
+  eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isSameDay,
+  isSameMonth,
+  startOfMonth,
+  startOfWeek,
+} from "date-fns";
 import { tr } from "date-fns/locale";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   addHoliday,
   removeHoliday,
@@ -63,13 +74,43 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
   const [pending, startTransition] = useTransition();
   const [date, setDate] = useState("");
   const [name, setName] = useState("");
+  const [month, setMonth] = useState(() => startOfMonth(new Date()));
+  const nameRef = useRef<HTMLInputElement>(null);
+
+  const holidayByDate = useMemo(() => {
+    const map = new Map<string, Holiday>();
+    for (const h of holidays) map.set(h.date, h);
+    return map;
+  }, [holidays]);
+
+  const days = useMemo(() => {
+    const start = startOfWeek(startOfMonth(month), { weekStartsOn: 1 });
+    const end = endOfWeek(endOfMonth(month), { weekStartsOn: 1 });
+    return eachDayOfInterval({ start, end });
+  }, [month]);
+
+  function onDayClick(day: Date) {
+    const key = format(day, "yyyy-MM-dd");
+    const existing = holidayByDate.get(key);
+    if (existing) {
+      startTransition(async () => {
+        await removeHoliday(existing.id);
+        toast.success("Silindi");
+        router.refresh();
+      });
+      return;
+    }
+    setDate(key);
+    nameRef.current?.focus();
+  }
 
   return (
     <div className="panel space-y-4">
       <div>
         <h2 className="font-semibold">Resmi tatiller</h2>
         <p className="mt-1 text-sm text-[var(--ink-muted)]">
-          Bu günler iş günü sayılmaz; izin talebi de engellenir.
+          Bu günler iş günü sayılmaz; takvimde görsel olarak işaretlenir, izin
+          aralığına dahil edilebilir.
         </p>
         <button
           type="button"
@@ -130,6 +171,7 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
             Ad
           </label>
           <input
+            ref={nameRef}
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -142,38 +184,89 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
         </button>
       </form>
 
-      {holidays.length === 0 ? (
-        <p className="text-sm text-[var(--ink-muted)]">Henüz tatil yok</p>
-      ) : (
-        <ul className="space-y-2">
-          {holidays.map((h) => (
-            <li
-              key={h.id}
-              className="flex items-center justify-between rounded-xl bg-[var(--bg-muted)] px-3 py-2 text-sm"
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          className="btn-outline !px-3"
+          onClick={() => setMonth((m) => addMonths(m, -1))}
+        >
+          <ChevronLeft className="size-4" />
+        </button>
+        <h3 className="text-base font-semibold capitalize">
+          {format(month, "MMMM yyyy", { locale: tr })}
+        </h3>
+        <button
+          type="button"
+          className="btn-outline !px-3"
+          onClick={() => setMonth((m) => addMonths(m, 1))}
+        >
+          <ChevronRight className="size-4" />
+        </button>
+      </div>
+
+      <p className="text-xs text-[var(--ink-muted)]">
+        Boş güne tıklayın → tarih dolar. Tatil gününe tıklayın → silinir.
+      </p>
+
+      <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-[var(--ink-muted)]">
+        {["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"].map((d) => (
+          <div key={d} className="py-2">
+            {d}
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-7 gap-1">
+        {days.map((day) => {
+          const key = format(day, "yyyy-MM-dd");
+          const holiday = holidayByDate.get(key);
+          const inMonth = isSameMonth(day, month);
+          const selected = date === key;
+
+          return (
+            <button
+              key={key}
+              type="button"
+              disabled={pending}
+              title={
+                holiday
+                  ? `${holiday.name} — silmek için tıklayın`
+                  : "Tarihi seçmek için tıklayın"
+              }
+              onClick={() => onDayClick(day)}
+              className={`min-h-[72px] rounded-xl border p-1.5 text-left transition ${
+                holiday
+                  ? "border-[var(--brand)]/40 bg-[var(--brand-soft)]/60 hover:border-[var(--brand)]"
+                  : selected
+                    ? "border-[var(--brand)] bg-[var(--brand-soft)]"
+                    : "border-[var(--border)] bg-white hover:border-[var(--brand)]"
+              } ${!inMonth ? "opacity-40" : ""}`}
             >
-              <span>
-                <span className="font-medium">
-                  {format(parseISO(h.date), "d MMM yyyy", { locale: tr })}
-                </span>
-                <span className="ml-2 text-[var(--ink-muted)]">{h.name}</span>
-              </span>
-              <button
-                type="button"
-                className="text-xs text-red-600 hover:underline"
-                onClick={() => {
-                  startTransition(async () => {
-                    await removeHoliday(h.id);
-                    toast.success("Silindi");
-                    router.refresh();
-                  });
-                }}
+              <span
+                className={`text-xs font-semibold ${
+                  isSameDay(day, new Date())
+                    ? "text-[var(--brand)]"
+                    : "text-[var(--ink)]"
+                }`}
               >
-                Kaldır
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+                {format(day, "d")}
+              </span>
+              {holiday && (
+                <p className="mt-1 truncate text-[10px] font-medium text-[var(--brand)]">
+                  {holiday.name}
+                </p>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-wrap gap-3 text-xs text-[var(--ink-muted)]">
+        <span className="inline-flex items-center gap-1">
+          <span className="size-2 rounded-sm bg-[var(--brand)]/50" /> Resmi tatil
+          (tıkla = sil)
+        </span>
+      </div>
     </div>
   );
 }
