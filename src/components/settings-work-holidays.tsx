@@ -22,6 +22,12 @@ import {
   seedTurkeyHolidays,
   setWorkStartTime,
 } from "@/lib/actions/settings";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { Holiday } from "@/lib/db/schema";
 
 const field =
@@ -75,6 +81,7 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
   const [date, setDate] = useState("");
   const [name, setName] = useState("");
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
+  const [pendingDelete, setPendingDelete] = useState<Holiday | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
   const holidayByDate = useMemo(() => {
@@ -93,15 +100,22 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
     const key = format(day, "yyyy-MM-dd");
     const existing = holidayByDate.get(key);
     if (existing) {
-      startTransition(async () => {
-        await removeHoliday(existing.id);
-        toast.success("Silindi");
-        router.refresh();
-      });
+      setPendingDelete(existing);
       return;
     }
     setDate(key);
     nameRef.current?.focus();
+  }
+
+  function confirmDelete() {
+    if (!pendingDelete) return;
+    const target = pendingDelete;
+    startTransition(async () => {
+      await removeHoliday(target.id);
+      toast.success("Silindi");
+      setPendingDelete(null);
+      router.refresh();
+    });
   }
 
   return (
@@ -205,7 +219,8 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
       </div>
 
       <p className="text-xs text-[var(--ink-muted)]">
-        Boş güne tıklayın → tarih dolar. Tatil gününe tıklayın → silinir.
+        Boş güne tıklayın → tarih dolar. Tatil gününe tıklayın → silme onayı
+        çıkar.
       </p>
 
       <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-[var(--ink-muted)]">
@@ -230,7 +245,7 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
               disabled={pending}
               title={
                 holiday
-                  ? `${holiday.name} — silmek için tıklayın`
+                  ? `${holiday.name} — kaldırmak için tıklayın`
                   : "Tarihi seçmek için tıklayın"
               }
               onClick={() => onDayClick(day)}
@@ -264,9 +279,47 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
       <div className="flex flex-wrap gap-3 text-xs text-[var(--ink-muted)]">
         <span className="inline-flex items-center gap-1">
           <span className="size-2 rounded-sm bg-[var(--brand)]/50" /> Resmi tatil
-          (tıkla = sil)
         </span>
       </div>
+
+      <Dialog
+        open={!!pendingDelete}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Tatili kaldır?</DialogTitle>
+          </DialogHeader>
+          {pendingDelete && (
+            <p className="text-sm text-[var(--ink-muted)]">
+              {format(new Date(pendingDelete.date + "T12:00:00"), "d MMMM yyyy", {
+                locale: tr,
+              })}{" "}
+              — {pendingDelete.name}
+            </p>
+          )}
+          <div className="mt-2 flex justify-end gap-2">
+            <button
+              type="button"
+              className="btn-outline"
+              disabled={pending}
+              onClick={() => setPendingDelete(null)}
+            >
+              Vazgeç
+            </button>
+            <button
+              type="button"
+              className="btn-primary bg-red-600 hover:bg-red-700"
+              disabled={pending}
+              onClick={confirmDelete}
+            >
+              {pending ? "Siliniyor..." : "Sil"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
