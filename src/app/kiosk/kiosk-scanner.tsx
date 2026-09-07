@@ -94,7 +94,7 @@ export default function KioskScanner() {
   return (
     <div className="flex min-h-dvh flex-col bg-[var(--ink)] text-white">
       <header className="flex items-center justify-between px-4 py-4">
-        <IndigoLogo className="[&_span]:text-white [&_.font-normal]:text-[var(--brand)]" />
+        <IndigoLogo className="rounded-md bg-white px-2 py-1" />
         <Link href="/" className="btn-outline !border-white/30 !text-white hover:!bg-white/10">
           Panele dön
         </Link>
