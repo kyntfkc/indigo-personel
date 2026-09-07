@@ -13,6 +13,7 @@ import {
   LogOut,
   User,
   Menu,
+  Settings,
 } from "lucide-react";
 import { IndigoLogo } from "./indigo-logo";
 import { signOut } from "next-auth/react";
@@ -27,6 +28,7 @@ const adminLinks = [
   { href: "/takvim", label: "Takvim", icon: CalendarRange },
   { href: "/izin", label: "İzin Onay", icon: CalendarDays },
   { href: "/raporlar", label: "Raporlar", icon: BarChart3 },
+  { href: "/ayarlar", label: "Ayarlar", icon: Settings },
 ];
 
 const personelLinks = [

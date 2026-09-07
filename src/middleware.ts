@@ -34,7 +34,8 @@ export default auth((req) => {
       pathname.startsWith("/kiosk") ||
       pathname.startsWith("/mesai") ||
       pathname.startsWith("/izin") ||
-      pathname.startsWith("/raporlar")) &&
+      pathname.startsWith("/raporlar") ||
+      pathname.startsWith("/ayarlar")) &&
     role !== "admin"
   ) {
     return NextResponse.redirect(new URL("/benim", req.url));
