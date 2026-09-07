@@ -7,6 +7,7 @@ import { tr } from "date-fns/locale";
 import { AppShell } from "@/components/app-shell";
 import { AdminCreateForm } from "@/components/admin-create-form";
 import {
+  BackupExportPanel,
   HolidaysPanel,
   WorkStartForm,
 } from "@/components/settings-work-holidays";
@@ -38,6 +39,7 @@ export default async function AyarlarPage() {
 
         <div className="grid gap-6 lg:grid-cols-2">
           <WorkStartForm workStart={workStart} />
+          <BackupExportPanel />
         </div>
 
         <HolidaysPanel holidays={holidays} />

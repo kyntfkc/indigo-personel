@@ -18,7 +18,9 @@ import { tr } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   addHoliday,
+  exportDataBackup,
   removeHoliday,
+  restoreHoliday,
   seedTurkeyHolidays,
   setWorkStartTime,
 } from "@/lib/actions/settings";
@@ -111,9 +113,28 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
     if (!pendingDelete) return;
     const target = pendingDelete;
     startTransition(async () => {
-      await removeHoliday(target.id);
-      toast.success("Silindi");
+      const result = await removeHoliday(target.id);
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
       setPendingDelete(null);
+      toast.success("Silindi", {
+        action: {
+          label: "Geri al",
+          onClick: () => {
+            startTransition(async () => {
+              const restored = await restoreHoliday(target.id);
+              if (restored.error) {
+                toast.error(restored.error);
+                return;
+              }
+              toast.success("Geri alındı");
+              router.refresh();
+            });
+          },
+        },
+      });
       router.refresh();
     });
   }
@@ -320,6 +341,47 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+export function BackupExportPanel() {
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <div className="panel space-y-3">
+      <h2 className="font-semibold">Veri yedeği</h2>
+      <p className="text-sm text-[var(--ink-muted)]">
+        Personel, mesai, izin, tatil ve ayarları JSON olarak indirir. Neon
+        konsol yedeği ayrıca önerilir.
+      </p>
+      <button
+        type="button"
+        disabled={pending}
+        className="btn-primary"
+        onClick={() => {
+          startTransition(async () => {
+            try {
+              const data = await exportDataBackup();
+              const blob = new Blob([JSON.stringify(data, null, 2)], {
+                type: "application/json",
+              });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              const day = new Date().toISOString().slice(0, 10);
+              a.href = url;
+              a.download = `indigo-yedek-${day}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+              toast.success("Yedek indirildi");
+            } catch {
+              toast.error("Yedek alınamadı");
+            }
+          });
+        }}
+      >
+        {pending ? "Hazırlanıyor..." : "Veri yedeği indir"}
+      </button>
     </div>
   );
 }

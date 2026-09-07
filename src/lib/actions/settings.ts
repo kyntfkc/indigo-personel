@@ -1,12 +1,22 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, isNotNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
 import { getDb } from "@/lib/db";
-import { holidays, siteSettings, users } from "@/lib/db/schema";
+import {
+  attendance,
+  auditLogs,
+  doorStations,
+  employees,
+  frozenDates,
+  holidays,
+  leaveRequests,
+  siteSettings,
+  users,
+} from "@/lib/db/schema";
 import { getTurkeyHolidays } from "@/lib/turkey-holidays";
 
 const WORK_START_KEY = "work_start_time";
@@ -18,6 +28,12 @@ async function requireAdmin() {
     throw new Error("Yetkisiz");
   }
   return session;
+}
+
+function revalidateHolidayPaths() {
+  revalidatePath("/ayarlar");
+  revalidatePath("/raporlar");
+  revalidatePath("/takvim");
 }
 
 export async function listAdmins() {
@@ -131,7 +147,11 @@ export async function setWorkStartTime(formData: FormData) {
 export async function listHolidays() {
   await requireAdmin();
   const db = getDb();
-  return db.select().from(holidays).orderBy(desc(holidays.date));
+  return db
+    .select()
+    .from(holidays)
+    .where(isNull(holidays.deletedAt))
+    .orderBy(desc(holidays.date));
 }
 
 export async function addHoliday(formData: FormData) {
@@ -141,6 +161,30 @@ export async function addHoliday(formData: FormData) {
   if (!date || !name) return { error: "Tarih ve ad gerekli" };
 
   const db = getDb();
+  const [existing] = await db
+    .select()
+    .from(holidays)
+    .where(eq(holidays.date, date))
+    .limit(1);
+
+  if (existing) {
+    if (!existing.deletedAt) {
+      return { error: "Bu tarih zaten kayıtlı" };
+    }
+    await db
+      .update(holidays)
+      .set({ name, deletedAt: null, createdBy: session.user.id })
+      .where(eq(holidays.id, existing.id));
+    await writeAudit({
+      action: "holiday.restore",
+      entityType: "holiday",
+      entityId: existing.id,
+      summary: `Resmi tatil geri eklendi: ${date} ${name}`,
+    });
+    revalidateHolidayPaths();
+    return { success: true };
+  }
+
   try {
     const [row] = await db
       .insert(holidays)
@@ -161,9 +205,7 @@ export async function addHoliday(formData: FormData) {
     return { error: "Bu tarih zaten kayıtlı" };
   }
 
-  revalidatePath("/ayarlar");
-  revalidatePath("/raporlar");
-  revalidatePath("/takvim");
+  revalidateHolidayPaths();
   return { success: true };
 }
 
@@ -173,11 +215,14 @@ export async function removeHoliday(id: string) {
   const [row] = await db
     .select()
     .from(holidays)
-    .where(eq(holidays.id, id))
+    .where(and(eq(holidays.id, id), isNull(holidays.deletedAt)))
     .limit(1);
   if (!row) return { error: "Bulunamadı" };
 
-  await db.delete(holidays).where(eq(holidays.id, id));
+  await db
+    .update(holidays)
+    .set({ deletedAt: new Date() })
+    .where(eq(holidays.id, id));
   await writeAudit({
     action: "holiday.delete",
     entityType: "holiday",
@@ -185,9 +230,32 @@ export async function removeHoliday(id: string) {
     summary: `Resmi tatil silindi: ${row.date} ${row.name}`,
   });
 
-  revalidatePath("/ayarlar");
-  revalidatePath("/raporlar");
-  revalidatePath("/takvim");
+  revalidateHolidayPaths();
+  return { success: true };
+}
+
+export async function restoreHoliday(id: string) {
+  await requireAdmin();
+  const db = getDb();
+  const [row] = await db
+    .select()
+    .from(holidays)
+    .where(and(eq(holidays.id, id), isNotNull(holidays.deletedAt)))
+    .limit(1);
+  if (!row) return { error: "Bulunamadı" };
+
+  await db
+    .update(holidays)
+    .set({ deletedAt: null })
+    .where(eq(holidays.id, id));
+  await writeAudit({
+    action: "holiday.restore",
+    entityType: "holiday",
+    entityId: id,
+    summary: `Resmi tatil geri alındı: ${row.date} ${row.name}`,
+  });
+
+  revalidateHolidayPaths();
   return { success: true };
 }
 
@@ -196,29 +264,105 @@ export async function seedTurkeyHolidays() {
   const db = getDb();
   const list = getTurkeyHolidays([2026, 2027]);
   let inserted = 0;
+  let restored = 0;
 
   for (const item of list) {
-    const result = await db
-      .insert(holidays)
-      .values({
+    const [existing] = await db
+      .select()
+      .from(holidays)
+      .where(eq(holidays.date, item.date))
+      .limit(1);
+
+    if (!existing) {
+      await db.insert(holidays).values({
         date: item.date,
         name: item.name,
         createdBy: session.user.id,
-      })
-      .onConflictDoNothing({ target: holidays.date })
-      .returning();
-    if (result.length > 0) inserted += 1;
+      });
+      inserted += 1;
+      continue;
+    }
+
+    if (existing.deletedAt) {
+      await db
+        .update(holidays)
+        .set({
+          name: item.name,
+          deletedAt: null,
+          createdBy: session.user.id,
+        })
+        .where(eq(holidays.id, existing.id));
+      restored += 1;
+    }
   }
 
   await writeAudit({
     action: "holiday.seed_turkey",
     entityType: "holiday",
-    summary: `Türkiye resmi tatilleri yüklendi (${inserted} yeni, 2026–2027)`,
-    meta: { inserted, total: list.length },
+    summary: `Türkiye resmi tatilleri yüklendi (${inserted} yeni, ${restored} geri alındı, 2026–2027)`,
+    meta: { inserted, restored, total: list.length },
   });
 
-  revalidatePath("/ayarlar");
-  revalidatePath("/raporlar");
-  revalidatePath("/takvim");
-  return { success: true, inserted, total: list.length };
+  revalidateHolidayPaths();
+  return {
+    success: true,
+    inserted: inserted + restored,
+    total: list.length,
+  };
+}
+
+export async function exportDataBackup() {
+  await requireAdmin();
+  const db = getDb();
+
+  const [
+    employeeRows,
+    userRows,
+    attendanceRows,
+    leaveRows,
+    frozenRows,
+    holidayRows,
+    doorRows,
+    settingRows,
+    auditRows,
+  ] = await Promise.all([
+    db.select().from(employees).orderBy(asc(employees.createdAt)),
+    db
+      .select({
+        id: users.id,
+        email: users.email,
+        username: users.username,
+        role: users.role,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .orderBy(asc(users.createdAt)),
+    db.select().from(attendance).orderBy(desc(attendance.recordedAt)),
+    db.select().from(leaveRequests).orderBy(desc(leaveRequests.createdAt)),
+    db.select().from(frozenDates).orderBy(desc(frozenDates.startDate)),
+    db.select().from(holidays).orderBy(desc(holidays.date)),
+    db.select().from(doorStations).orderBy(asc(doorStations.createdAt)),
+    db.select().from(siteSettings),
+    db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(5000),
+  ]);
+
+  await writeAudit({
+    action: "backup.export",
+    entityType: "backup",
+    summary: "Veri yedeği indirildi",
+  });
+
+  return {
+    exportedAt: new Date().toISOString(),
+    note: "Indigo Personel yedeği. Neon konsol yedeği ayrıca önerilir.",
+    employees: employeeRows,
+    users: userRows,
+    attendance: attendanceRows,
+    leaveRequests: leaveRows,
+    frozenDates: frozenRows,
+    holidays: holidayRows,
+    doorStations: doorRows,
+    siteSettings: settingRows,
+    auditLogs: auditRows,
+  };
 }

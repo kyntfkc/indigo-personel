@@ -1,4 +1,4 @@
-import { and, gte, lte } from "drizzle-orm";
+import { and, gte, isNull, lte } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { holidays } from "@/lib/db/schema";
 
@@ -46,7 +46,13 @@ export async function loadHolidaySet(fromKey: string, toKey: string) {
   const rows = await db
     .select()
     .from(holidays)
-    .where(and(gte(holidays.date, fromKey), lte(holidays.date, toKey)));
+    .where(
+      and(
+        gte(holidays.date, fromKey),
+        lte(holidays.date, toKey),
+        isNull(holidays.deletedAt)
+      )
+    );
   return new Set(rows.map((r) => r.date));
 }
 
@@ -55,6 +61,12 @@ export async function listHolidaysInRange(fromKey: string, toKey: string) {
   return db
     .select()
     .from(holidays)
-    .where(and(gte(holidays.date, fromKey), lte(holidays.date, toKey)))
+    .where(
+      and(
+        gte(holidays.date, fromKey),
+        lte(holidays.date, toKey),
+        isNull(holidays.deletedAt)
+      )
+    )
     .orderBy(holidays.date);
 }

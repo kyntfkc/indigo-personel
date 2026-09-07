@@ -285,9 +285,27 @@ export async function createManualAttendance(formData: FormData) {
 export async function deleteAttendance(id: string) {
   await requireAdmin();
   const db = getDb();
+  const [row] = await db
+    .select()
+    .from(attendance)
+    .where(eq(attendance.id, id))
+    .limit(1);
+  if (!row) return { error: "Bulunamadı" };
+
   await db.delete(attendance).where(eq(attendance.id, id));
   revalidatePath("/mesai");
   revalidatePath("/");
+  await writeAudit({
+    action: "attendance.delete",
+    entityType: "attendance",
+    entityId: id,
+    summary: `Mesai kaydı silindi: ${row.type}`,
+    meta: {
+      employeeId: row.employeeId,
+      recordedAt: row.recordedAt,
+      method: row.method,
+    },
+  });
   return { success: true };
 }
 

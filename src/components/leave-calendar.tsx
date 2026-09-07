@@ -21,6 +21,7 @@ import {
   addFrozenDate,
   createLeaveRequest,
   removeFrozenDate,
+  restoreFrozenDate,
 } from "@/lib/actions/leave";
 import {
   Dialog,
@@ -88,6 +89,8 @@ export function LeaveCalendar({
   const [freezeStart, setFreezeStart] = useState("");
   const [freezeEnd, setFreezeEnd] = useState("");
   const [freezeReason, setFreezeReason] = useState("");
+  const [pendingFrozenDelete, setPendingFrozenDelete] =
+    useState<CalendarFrozen | null>(null);
 
   const frozenSet = useMemo(() => {
     const set = new Set<string>();
@@ -415,13 +418,7 @@ export function LeaveCalendar({
                   <button
                     type="button"
                     className="text-xs text-red-600 hover:underline"
-                    onClick={() => {
-                      startTransition(async () => {
-                        await removeFrozenDate(f.id);
-                        toast.success("Kaldırıldı");
-                        router.refresh();
-                      });
-                    }}
+                    onClick={() => setPendingFrozenDelete(f)}
                   >
                     Kaldır
                   </button>
@@ -480,6 +477,78 @@ export function LeaveCalendar({
               {pending ? "Gönderiliyor..." : "Talep gönder"}
             </button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!pendingFrozenDelete}
+        onOpenChange={(open) => {
+          if (!open) setPendingFrozenDelete(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Dondurulmuş günü kaldır?</DialogTitle>
+          </DialogHeader>
+          {pendingFrozenDelete && (
+            <p className="text-sm text-[var(--ink-muted)]">
+              {format(parseISO(pendingFrozenDelete.startDate), "d MMM yyyy", {
+                locale: tr,
+              })}
+              {pendingFrozenDelete.endDate !== pendingFrozenDelete.startDate
+                ? ` – ${format(parseISO(pendingFrozenDelete.endDate), "d MMM yyyy", { locale: tr })}`
+                : ""}
+              {pendingFrozenDelete.reason
+                ? ` — ${pendingFrozenDelete.reason}`
+                : ""}
+            </p>
+          )}
+          <div className="mt-2 flex justify-end gap-2">
+            <button
+              type="button"
+              className="btn-outline"
+              disabled={pending}
+              onClick={() => setPendingFrozenDelete(null)}
+            >
+              Vazgeç
+            </button>
+            <button
+              type="button"
+              className="btn-primary bg-red-600 hover:bg-red-700"
+              disabled={pending}
+              onClick={() => {
+                if (!pendingFrozenDelete) return;
+                const target = pendingFrozenDelete;
+                startTransition(async () => {
+                  const result = await removeFrozenDate(target.id);
+                  if (result?.error) {
+                    toast.error(result.error);
+                    return;
+                  }
+                  setPendingFrozenDelete(null);
+                  toast.success("Kaldırıldı", {
+                    action: {
+                      label: "Geri al",
+                      onClick: () => {
+                        startTransition(async () => {
+                          const restored = await restoreFrozenDate(target.id);
+                          if (restored.error) {
+                            toast.error(restored.error);
+                            return;
+                          }
+                          toast.success("Geri alındı");
+                          router.refresh();
+                        });
+                      },
+                    },
+                  });
+                  router.refresh();
+                });
+              }}
+            >
+              {pending ? "Kaldırılıyor..." : "Kaldır"}
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

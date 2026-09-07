@@ -1,4 +1,4 @@
-import { and, eq, gte, lte } from "drizzle-orm";
+import { and, eq, gte, isNull, lte } from "drizzle-orm";
 import { differenceInCalendarDays, parseISO } from "date-fns";
 import { getDb } from "@/lib/db";
 import {
@@ -100,7 +100,8 @@ export async function assertLeaveAllowed(input: {
     .where(
       and(
         lte(frozenDates.startDate, endDate),
-        gte(frozenDates.endDate, startDate)
+        gte(frozenDates.endDate, startDate),
+        isNull(frozenDates.deletedAt)
       )
     );
 

@@ -1,6 +1,6 @@
 "use server";
 
-import { and, desc, eq, gte, lte } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
@@ -204,7 +204,11 @@ export async function getCalendarLeaveData(from: string, to: string) {
     .select()
     .from(frozenDates)
     .where(
-      and(lte(frozenDates.startDate, to), gte(frozenDates.endDate, from))
+      and(
+        lte(frozenDates.startDate, to),
+        gte(frozenDates.endDate, from),
+        isNull(frozenDates.deletedAt)
+      )
     )
     .orderBy(desc(frozenDates.startDate));
 
@@ -215,7 +219,13 @@ export async function getCalendarLeaveData(from: string, to: string) {
       name: holidays.name,
     })
     .from(holidays)
-    .where(and(gte(holidays.date, from), lte(holidays.date, to)))
+    .where(
+      and(
+        gte(holidays.date, from),
+        lte(holidays.date, to),
+        isNull(holidays.deletedAt)
+      )
+    )
     .orderBy(holidays.date);
 
   return { leaves: visible, frozen, holidays: holidayRows };
@@ -226,7 +236,11 @@ export async function listFrozenDates() {
   if (!session?.user) throw new Error("Yetkisiz");
 
   const db = getDb();
-  return db.select().from(frozenDates).orderBy(desc(frozenDates.startDate));
+  return db
+    .select()
+    .from(frozenDates)
+    .where(isNull(frozenDates.deletedAt))
+    .orderBy(desc(frozenDates.startDate));
 }
 
 export async function addFrozenDate(formData: FormData) {
@@ -250,7 +264,8 @@ export async function addFrozenDate(formData: FormData) {
     .where(
       and(
         lte(frozenDates.startDate, endDate),
-        gte(frozenDates.endDate, startDate)
+        gte(frozenDates.endDate, startDate),
+        isNull(frozenDates.deletedAt)
       )
     )
     .limit(1);
@@ -276,7 +291,70 @@ export async function removeFrozenDate(id: string) {
   }
 
   const db = getDb();
-  await db.delete(frozenDates).where(eq(frozenDates.id, id));
+  const [row] = await db
+    .select()
+    .from(frozenDates)
+    .where(and(eq(frozenDates.id, id), isNull(frozenDates.deletedAt)))
+    .limit(1);
+  if (!row) return { error: "Bulunamadı" };
+
+  await db
+    .update(frozenDates)
+    .set({ deletedAt: new Date() })
+    .where(eq(frozenDates.id, id));
+
+  await writeAudit({
+    action: "frozen.delete",
+    entityType: "frozen_date",
+    entityId: id,
+    summary: `Dondurulmuş gün kaldırıldı: ${row.startDate}–${row.endDate}`,
+  });
+
+  revalidateLeavePaths();
+  return { success: true };
+}
+
+export async function restoreFrozenDate(id: string) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    return { error: "Yetkisiz" };
+  }
+
+  const db = getDb();
+  const [row] = await db
+    .select()
+    .from(frozenDates)
+    .where(eq(frozenDates.id, id))
+    .limit(1);
+  if (!row) return { error: "Bulunamadı" };
+
+  const overlapping = await db
+    .select()
+    .from(frozenDates)
+    .where(
+      and(
+        lte(frozenDates.startDate, row.endDate),
+        gte(frozenDates.endDate, row.startDate),
+        isNull(frozenDates.deletedAt)
+      )
+    )
+    .limit(1);
+  if (overlapping.length > 0) {
+    return { error: "Geri alma çakışıyor; önce diğer aralığı kaldırın" };
+  }
+
+  await db
+    .update(frozenDates)
+    .set({ deletedAt: null })
+    .where(eq(frozenDates.id, id));
+
+  await writeAudit({
+    action: "frozen.restore",
+    entityType: "frozen_date",
+    entityId: id,
+    summary: `Dondurulmuş gün geri alındı: ${row.startDate}–${row.endDate}`,
+  });
+
   revalidateLeavePaths();
   return { success: true };
 }

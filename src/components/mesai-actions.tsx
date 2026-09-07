@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { createManualAttendance, deleteAttendance } from "@/lib/actions/attendance";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import {
   Dialog,
   DialogContent,
@@ -94,18 +94,57 @@ export function ManualAttendanceDialog({
 
 export function DeleteAttendanceButton({ id }: { id: string }) {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+
   return (
-    <button
-      type="button"
-      className="text-xs text-red-600 hover:underline"
-      onClick={async () => {
-        if (!confirm("Kayıt silinsin mi?")) return;
-        await deleteAttendance(id);
-        toast.success("Silindi");
-        router.refresh();
-      }}
-    >
-      Sil
-    </button>
+    <>
+      <button
+        type="button"
+        className="text-xs text-red-600 hover:underline"
+        onClick={() => setOpen(true)}
+      >
+        Sil
+      </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mesai kaydı silinsin mi?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-[var(--ink-muted)]">
+            Bu işlem geri alınamaz.
+          </p>
+          <div className="mt-2 flex justify-end gap-2">
+            <button
+              type="button"
+              className="btn-outline"
+              disabled={pending}
+              onClick={() => setOpen(false)}
+            >
+              Vazgeç
+            </button>
+            <button
+              type="button"
+              className="btn-primary bg-red-600 hover:bg-red-700"
+              disabled={pending}
+              onClick={() => {
+                startTransition(async () => {
+                  const result = await deleteAttendance(id);
+                  if (result && "error" in result && result.error) {
+                    toast.error(String(result.error));
+                    return;
+                  }
+                  toast.success("Silindi");
+                  setOpen(false);
+                  router.refresh();
+                });
+              }}
+            >
+              {pending ? "Siliniyor..." : "Sil"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

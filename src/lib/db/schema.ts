@@ -108,6 +108,7 @@ export const frozenDates = pgTable("frozen_dates", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });
 
 export const doorStations = pgTable("door_stations", {
@@ -130,6 +131,7 @@ export const holidays = pgTable("holidays", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });
 
 export const siteSettings = pgTable("site_settings", {
