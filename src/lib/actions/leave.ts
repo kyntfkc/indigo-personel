@@ -4,7 +4,7 @@ import { and, desc, eq, gte, lte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { employees, frozenDates, leaveRequests } from "@/lib/db/schema";
+import { employees, frozenDates, holidays, leaveRequests } from "@/lib/db/schema";
 import { assertLeaveAllowed, getLeaveBalance } from "@/lib/leave-policy";
 import { writeAudit } from "@/lib/audit";
 
@@ -208,7 +208,17 @@ export async function getCalendarLeaveData(from: string, to: string) {
     )
     .orderBy(desc(frozenDates.startDate));
 
-  return { leaves: visible, frozen };
+  const holidayRows = await db
+    .select({
+      id: holidays.id,
+      date: holidays.date,
+      name: holidays.name,
+    })
+    .from(holidays)
+    .where(and(gte(holidays.date, from), lte(holidays.date, to)))
+    .orderBy(holidays.date);
+
+  return { leaves: visible, frozen, holidays: holidayRows };
 }
 
 export async function listFrozenDates() {

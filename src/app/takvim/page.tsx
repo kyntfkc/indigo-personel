@@ -33,7 +33,7 @@ export default async function TakvimPage() {
     "yyyy-MM-dd"
   );
 
-  const [{ leaves, frozen }, allFrozen] = await Promise.all([
+  const [{ leaves, frozen, holidays }, allFrozen] = await Promise.all([
     getCalendarLeaveData(from, to),
     listFrozenDates(),
   ]);
@@ -57,6 +57,7 @@ export default async function TakvimPage() {
         <LeaveCalendar
           initialLeaves={leaves}
           initialFrozen={allFrozen.length ? allFrozen : frozen}
+          initialHolidays={holidays}
           isAdmin={session.user.role === "admin"}
           employeeId={employeeId}
           balance={balance}

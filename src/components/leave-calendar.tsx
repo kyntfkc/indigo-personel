@@ -49,6 +49,12 @@ export type CalendarFrozen = {
   reason: string | null;
 };
 
+export type CalendarHoliday = {
+  id: string;
+  date: string;
+  name: string;
+};
+
 function initials(first: string, last: string) {
   return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
 }
@@ -61,12 +67,14 @@ function dateInRange(day: Date, start: string, end: string) {
 export function LeaveCalendar({
   initialLeaves,
   initialFrozen,
+  initialHolidays = [],
   isAdmin,
   employeeId,
   balance,
 }: {
   initialLeaves: CalendarLeave[];
   initialFrozen: CalendarFrozen[];
+  initialHolidays?: CalendarHoliday[];
   isAdmin: boolean;
   employeeId: string | null;
   balance: { entitlement: number; used: number; remaining: number; pending: number };
@@ -92,6 +100,12 @@ export function LeaveCalendar({
     }
     return set;
   }, [initialFrozen]);
+
+  const holidayMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const h of initialHolidays) map.set(h.date, h.name);
+    return map;
+  }, [initialHolidays]);
 
   const days = useMemo(() => {
     const start = startOfWeek(startOfMonth(month), { weekStartsOn: 1 });
@@ -222,7 +236,8 @@ export function LeaveCalendar({
         </div>
 
         <p className="mb-3 text-xs text-[var(--ink-muted)]">
-          İzin için iki tarih seçin (başlangıç → bitiş). Dondurulmuş günler kilitlidir.
+          İzin için iki tarih seçin (başlangıç → bitiş). Dondurulmuş günler
+          kilitlidir; resmi tatiller görseldir, aralığa dahil edilebilir.
         </p>
 
         <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-[var(--ink-muted)]">
@@ -237,6 +252,7 @@ export function LeaveCalendar({
           {days.map((day) => {
             const key = format(day, "yyyy-MM-dd");
             const frozen = frozenSet.has(key);
+            const holidayName = holidayMap.get(key);
             const inMonth = isSameMonth(day, month);
             const selected = isSelected(day);
             const dayLeaves = initialLeaves.filter((l) =>
@@ -248,13 +264,16 @@ export function LeaveCalendar({
                 key={key}
                 type="button"
                 disabled={frozen}
+                title={holidayName || undefined}
                 onClick={() => onDayClick(day)}
                 className={`min-h-[88px] rounded-xl border p-1.5 text-left transition ${
                   frozen
                     ? "cursor-not-allowed border-dashed border-gray-300 bg-gray-100 opacity-80"
                     : selected
                       ? "border-[var(--brand)] bg-[var(--brand-soft)]"
-                      : "border-[var(--border)] bg-white hover:border-[var(--brand)]"
+                      : holidayName
+                        ? "border-[var(--brand)]/40 bg-[var(--brand-soft)]/60 hover:border-[var(--brand)]"
+                        : "border-[var(--border)] bg-white hover:border-[var(--brand)]"
                 } ${!inMonth ? "opacity-40" : ""}`}
               >
                 <div className="mb-1 flex items-center justify-between">
@@ -269,6 +288,11 @@ export function LeaveCalendar({
                   </span>
                   {frozen && <Lock className="size-3 text-gray-500" />}
                 </div>
+                {holidayName && (
+                  <p className="mb-1 truncate text-[10px] font-medium text-[var(--brand)]">
+                    {holidayName}
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-0.5">
                   {dayLeaves.slice(0, 3).map((l) => (
                     <span
@@ -303,6 +327,9 @@ export function LeaveCalendar({
           </span>
           <span className="inline-flex items-center gap-1">
             <Lock className="size-3" /> Dondurulmuş
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="size-2 rounded-sm bg-[var(--brand)]/50" /> Resmi tatil
           </span>
         </div>
       </div>
