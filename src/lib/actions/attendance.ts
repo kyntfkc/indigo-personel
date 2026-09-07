@@ -6,6 +6,12 @@ import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { attendance, doorStations, employees } from "@/lib/db/schema";
 import { generateQrToken } from "@/lib/utils-app";
+import {
+  istanbulDateKey,
+  istanbulDayBounds,
+  istanbulEighteenHundred,
+  previousIstanbulDateKey,
+} from "@/lib/istanbul-time";
 
 const COOLDOWN_MS = 60_000;
 
@@ -17,34 +23,6 @@ async function requireAdmin() {
     throw new Error("Yetkisiz");
   }
   return session;
-}
-
-/** Istanbul calendar day bounds as UTC Date objects */
-export function istanbulDayBounds(dayKey: string) {
-  // dayKey = yyyy-MM-dd in Europe/Istanbul
-  const start = new Date(`${dayKey}T00:00:00+03:00`);
-  const end = new Date(`${dayKey}T23:59:59.999+03:00`);
-  return { start, end };
-}
-
-export function istanbulDateKey(date = new Date()) {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Istanbul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
-}
-
-export function previousIstanbulDateKey(date = new Date()) {
-  const todayKey = istanbulDateKey(date);
-  const noon = new Date(`${todayKey}T12:00:00+03:00`);
-  noon.setDate(noon.getDate() - 1);
-  return istanbulDateKey(noon);
-}
-
-export function istanbulEighteenHundred(dayKey: string) {
-  return new Date(`${dayKey}T18:00:00+03:00`);
 }
 
 export async function recordAttendance(input: {

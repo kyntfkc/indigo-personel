@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  autoCheckoutOpenShifts,
-  previousIstanbulDateKey,
-} from "@/lib/actions/attendance";
+import { autoCheckoutOpenShifts } from "@/lib/actions/attendance";
+import { previousIstanbulDateKey } from "@/lib/istanbul-time";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
