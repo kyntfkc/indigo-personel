@@ -11,12 +11,16 @@ import {
   fetchLeaveBalance,
   getMyLeaveRequests,
 } from "@/lib/actions/leave";
+import { getEmployeeMonthHours } from "@/lib/actions/reports";
 import { MyQr } from "@/components/my-qr";
 import {
   LeaveBalanceCard,
   LeaveHistoryList,
 } from "@/components/leave-balance-card";
-import { format, parseISO } from "date-fns";
+import { EmployeeProfileHeader } from "@/components/employee-profile-header";
+import { PhotoUpload } from "@/components/photo-upload";
+import { EmployeeEditForm } from "@/components/employee-edit-form";
+import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import Link from "next/link";
 
@@ -53,10 +57,11 @@ export default async function BenimPage() {
 
   if (!employee) redirect("/giris");
 
-  const [records, balance, leaves] = await Promise.all([
+  const [records, balance, leaves, monthHours] = await Promise.all([
     getMyAttendance(employeeId),
     fetchLeaveBalance(employeeId),
     getMyLeaveRequests(employeeId),
+    getEmployeeMonthHours(employeeId),
   ]);
 
   const todayStart = new Date();
@@ -77,21 +82,25 @@ export default async function BenimPage() {
   return (
     <AppShell role={shellRole} userName={name}>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Merhaba, {employee.firstName}</h1>
-          <p className="text-sm text-[var(--ink-muted)]">
-            {[employee.position, employee.department].filter(Boolean).join(" · ")}
-            {employee.hireDate
-              ? ` · İşe giriş ${format(parseISO(employee.hireDate), "d MMM yyyy", { locale: tr })}`
-              : ""}
-          </p>
-          <p className="mt-1 text-sm text-[var(--ink-muted)]">
-            Bugün:{" "}
-            <span className="font-medium text-[var(--brand)]">{status}</span>
-          </p>
-        </div>
+        <p className="text-sm text-[var(--ink-muted)]">
+          Bugün:{" "}
+          <span className="font-medium text-[var(--brand)]">{status}</span>
+        </p>
+
+        <EmployeeProfileHeader employee={employee} monthHours={monthHours} />
 
         <LeaveBalanceCard balance={balance} hireDate={employee.hireDate} />
+
+        <div className="grid gap-6 lg:grid-cols-3">
+          <PhotoUpload
+            employeeId={employee.id}
+            photoUrl={employee.photoUrl}
+            name={name}
+          />
+          <div className="lg:col-span-2">
+            <EmployeeEditForm employee={employee} mode="self" />
+          </div>
+        </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
           <MyQr token={employee.qrToken} name={name} />
@@ -99,10 +108,7 @@ export default async function BenimPage() {
           <section className="panel">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-semibold">Son izinler</h2>
-              <Link
-                href="/takvim"
-                className="btn-primary !py-1.5 !text-xs"
-              >
+              <Link href="/takvim" className="btn-primary !py-1.5 !text-xs">
                 Takvimden talep et
               </Link>
             </div>

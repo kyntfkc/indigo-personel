@@ -11,6 +11,68 @@ function monthRange(year: number, month: number) {
   return { from, to };
 }
 
+function calcHoursFromRecords(
+  empRecords: { type: string; recordedAt: Date }[]
+) {
+  let totalMs = 0;
+  let openGiris: Date | null = null;
+
+  for (const rec of empRecords) {
+    if (rec.type === "giris") {
+      openGiris = new Date(rec.recordedAt);
+    } else if (rec.type === "cikis" && openGiris) {
+      totalMs += new Date(rec.recordedAt).getTime() - openGiris.getTime();
+      openGiris = null;
+    }
+  }
+
+  const daysPresent = new Set(
+    empRecords
+      .filter((r) => r.type === "giris")
+      .map((r) => new Date(r.recordedAt).toISOString().slice(0, 10))
+  ).size;
+
+  return {
+    hours: Math.round((totalMs / 3600000) * 10) / 10,
+    daysPresent,
+  };
+}
+
+export async function getEmployeeMonthHours(
+  employeeId: string,
+  year?: number,
+  month?: number
+) {
+  const session = await auth();
+  if (!session?.user) throw new Error("Yetkisiz");
+  if (
+    session.user.role !== "admin" &&
+    session.user.employeeId !== employeeId
+  ) {
+    throw new Error("Yetkisiz");
+  }
+
+  const now = new Date();
+  const y = year ?? now.getFullYear();
+  const m = month ?? now.getMonth() + 1;
+  const { from, to } = monthRange(y, m);
+
+  const db = getDb();
+  const records = await db
+    .select()
+    .from(attendance)
+    .where(
+      and(
+        eq(attendance.employeeId, employeeId),
+        gte(attendance.recordedAt, from),
+        lte(attendance.recordedAt, to)
+      )
+    )
+    .orderBy(attendance.recordedAt);
+
+  return { year: y, month: m, ...calcHoursFromRecords(records) };
+}
+
 export async function getMonthlyReport(year: number, month: number) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
@@ -46,23 +108,7 @@ export async function getMonthlyReport(year: number, month: number) {
 
   const byEmployee = activeEmployees.map((emp) => {
     const empRecords = records.filter((r) => r.employeeId === emp.id);
-    let totalMs = 0;
-    let openGiris: Date | null = null;
-
-    for (const rec of empRecords) {
-      if (rec.type === "giris") {
-        openGiris = new Date(rec.recordedAt);
-      } else if (rec.type === "cikis" && openGiris) {
-        totalMs += new Date(rec.recordedAt).getTime() - openGiris.getTime();
-        openGiris = null;
-      }
-    }
-
-    const daysWithGiris = new Set(
-      empRecords
-        .filter((r) => r.type === "giris")
-        .map((r) => new Date(r.recordedAt).toISOString().slice(0, 10))
-    ).size;
+    const { hours, daysPresent } = calcHoursFromRecords(empRecords);
 
     const empLeaves = leaves.filter((l) => l.employeeId === emp.id);
     let leaveDays = 0;
@@ -82,8 +128,8 @@ export async function getMonthlyReport(year: number, month: number) {
       employeeId: emp.id,
       name: `${emp.firstName} ${emp.lastName}`,
       department: emp.department,
-      hours: Math.round((totalMs / 3600000) * 10) / 10,
-      daysPresent: daysWithGiris,
+      hours,
+      daysPresent,
       leaveDays,
       recordCount: empRecords.length,
     };

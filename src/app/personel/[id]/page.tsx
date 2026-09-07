@@ -4,6 +4,8 @@ import { AppShell } from "@/components/app-shell";
 import { getEmployee } from "@/lib/actions/employees";
 import { EmployeeQrCard } from "@/components/employee-qr-card";
 import { EmployeeEditForm } from "@/components/employee-edit-form";
+import { EmployeeProfileHeader } from "@/components/employee-profile-header";
+import { PhotoUpload } from "@/components/photo-upload";
 import {
   LeaveBalanceCard,
   LeaveHistoryList,
@@ -12,9 +14,8 @@ import {
   fetchLeaveBalance,
   getMyLeaveRequests,
 } from "@/lib/actions/leave";
+import { getEmployeeMonthHours } from "@/lib/actions/reports";
 import Link from "next/link";
-import { format, parseISO } from "date-fns";
-import { tr } from "date-fns/locale";
 
 export const dynamic = "force-dynamic";
 
@@ -31,51 +32,37 @@ export default async function PersonelDetailPage({
   if (!employee) notFound();
 
   const name = `${employee.firstName} ${employee.lastName}`;
-  const [balance, leaves] = await Promise.all([
+  const [balance, leaves, monthHours] = await Promise.all([
     fetchLeaveBalance(id),
     getMyLeaveRequests(id),
+    getEmployeeMonthHours(id),
   ]);
 
   return (
     <AppShell role="admin" userName={session.user.name || session.user.email}>
       <div className="space-y-6">
-        <div>
-          <Link
-            href="/personel"
-            className="text-sm text-[var(--brand)] hover:underline"
-          >
-            ← Personel listesi
-          </Link>
-          <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h1 className="text-2xl font-semibold">{name}</h1>
-              <p className="text-sm text-[var(--ink-muted)]">
-                {[employee.position, employee.department]
-                  .filter(Boolean)
-                  .join(" · ") || "Profil"}
-                {employee.hireDate
-                  ? ` · İşe giriş ${format(parseISO(employee.hireDate), "d MMM yyyy", { locale: tr })}`
-                  : ""}
-              </p>
-            </div>
-            <span
-              className={`rounded-full px-3 py-1 text-xs font-medium ${
-                employee.active
-                  ? "bg-emerald-50 text-emerald-700"
-                  : "bg-gray-100 text-gray-600"
-              }`}
-            >
-              {employee.active ? "Aktif" : "Pasif"}
-            </span>
-          </div>
-        </div>
+        <Link
+          href="/personel"
+          className="text-sm text-[var(--brand)] hover:underline"
+        >
+          ← Personel listesi
+        </Link>
+
+        <EmployeeProfileHeader
+          employee={employee}
+          monthHours={monthHours}
+          showNotes
+        />
 
         <div className="grid gap-6 lg:grid-cols-2">
           <LeaveBalanceCard balance={balance} hireDate={employee.hireDate} />
           <div className="panel">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-semibold">İzin geçmişi</h2>
-              <Link href="/takvim" className="text-xs text-[var(--brand)] hover:underline">
+              <Link
+                href="/takvim"
+                className="text-xs text-[var(--brand)] hover:underline"
+              >
                 Takvimde gör
               </Link>
             </div>
@@ -83,14 +70,22 @@ export default async function PersonelDetailPage({
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <EmployeeEditForm employee={employee} />
-          <EmployeeQrCard
+        <div className="grid gap-6 lg:grid-cols-3">
+          <PhotoUpload
             employeeId={employee.id}
-            qrToken={employee.qrToken}
+            photoUrl={employee.photoUrl}
             name={name}
           />
+          <div className="lg:col-span-2">
+            <EmployeeEditForm employee={employee} mode="admin" />
+          </div>
         </div>
+
+        <EmployeeQrCard
+          employeeId={employee.id}
+          qrToken={employee.qrToken}
+          name={name}
+        />
       </div>
     </AppShell>
   );

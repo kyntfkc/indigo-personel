@@ -6,11 +6,19 @@ import { toast } from "sonner";
 import { useState } from "react";
 import type { Employee } from "@/lib/db/schema";
 
-export function EmployeeEditForm({ employee }: { employee: Employee }) {
+export function EmployeeEditForm({
+  employee,
+  mode = "admin",
+}: {
+  employee: Employee;
+  mode?: "admin" | "self";
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const field =
     "w-full rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm outline-none focus:border-[var(--brand)]";
+  const area =
+    "w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-2 text-sm outline-none focus:border-[var(--brand)]";
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -24,6 +32,30 @@ export function EmployeeEditForm({ employee }: { employee: Employee }) {
     }
     toast.success("Güncellendi");
     router.refresh();
+  }
+
+  if (mode === "self") {
+    return (
+      <form onSubmit={onSubmit} className="panel space-y-3">
+        <h2 className="font-semibold">İletişim bilgilerim</h2>
+        <div>
+          <label className="mb-1 block text-sm">Telefon</label>
+          <input name="phone" defaultValue={employee.phone ?? ""} className={field} />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm">Acil iletişim</label>
+          <input
+            name="emergencyContact"
+            defaultValue={employee.emergencyContact ?? ""}
+            placeholder="Ad / telefon"
+            className={field}
+          />
+        </div>
+        <button type="submit" disabled={loading} className="btn-primary">
+          {loading ? "Kaydediliyor..." : "Kaydet"}
+        </button>
+      </form>
+    );
   }
 
   return (
@@ -47,6 +79,15 @@ export function EmployeeEditForm({ employee }: { employee: Employee }) {
         <label className="mb-1 block text-sm">Telefon</label>
         <input name="phone" defaultValue={employee.phone ?? ""} className={field} />
       </div>
+      <div>
+        <label className="mb-1 block text-sm">Acil iletişim</label>
+        <input
+          name="emergencyContact"
+          defaultValue={employee.emergencyContact ?? ""}
+          placeholder="Ad / telefon"
+          className={field}
+        />
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label className="mb-1 block text-sm">Departman</label>
@@ -60,6 +101,15 @@ export function EmployeeEditForm({ employee }: { employee: Employee }) {
       <div>
         <label className="mb-1 block text-sm">İşe giriş</label>
         <input name="hireDate" type="date" defaultValue={employee.hireDate ?? ""} className={field} />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm">Admin notu</label>
+        <textarea
+          name="notes"
+          rows={3}
+          defaultValue={employee.notes ?? ""}
+          className={area}
+        />
       </div>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="active" defaultChecked={employee.active} />
