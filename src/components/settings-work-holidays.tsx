@@ -8,6 +8,7 @@ import { tr } from "date-fns/locale";
 import {
   addHoliday,
   removeHoliday,
+  seedTurkeyHolidays,
   setWorkStartTime,
 } from "@/lib/actions/settings";
 import type { Holiday } from "@/lib/db/schema";
@@ -70,6 +71,26 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
         <p className="mt-1 text-sm text-[var(--ink-muted)]">
           Bu günler iş günü sayılmaz; izin talebi de engellenir.
         </p>
+        <button
+          type="button"
+          disabled={pending}
+          className="btn-outline mt-3 !text-xs"
+          onClick={() => {
+            startTransition(async () => {
+              const result = await seedTurkeyHolidays();
+              if ("error" in result && result.error) {
+                toast.error(String(result.error));
+                return;
+              }
+              toast.success(
+                `Türkiye tatilleri yüklendi (${result.inserted} yeni / ${result.total})`
+              );
+              router.refresh();
+            });
+          }}
+        >
+          Türkiye resmi tatillerini ekle (2026–2027)
+        </button>
       </div>
 
       <form

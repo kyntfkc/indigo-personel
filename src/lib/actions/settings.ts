@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
 import { getDb } from "@/lib/db";
 import { holidays, siteSettings, users } from "@/lib/db/schema";
+import { getTurkeyHolidays } from "@/lib/turkey-holidays";
 
 const WORK_START_KEY = "work_start_time";
 const DEFAULT_WORK_START = "09:00";
@@ -188,4 +189,36 @@ export async function removeHoliday(id: string) {
   revalidatePath("/raporlar");
   revalidatePath("/takvim");
   return { success: true };
+}
+
+export async function seedTurkeyHolidays() {
+  const session = await requireAdmin();
+  const db = getDb();
+  const list = getTurkeyHolidays([2026, 2027]);
+  let inserted = 0;
+
+  for (const item of list) {
+    const result = await db
+      .insert(holidays)
+      .values({
+        date: item.date,
+        name: item.name,
+        createdBy: session.user.id,
+      })
+      .onConflictDoNothing({ target: holidays.date })
+      .returning();
+    if (result.length > 0) inserted += 1;
+  }
+
+  await writeAudit({
+    action: "holiday.seed_turkey",
+    entityType: "holiday",
+    summary: `Türkiye resmi tatilleri yüklendi (${inserted} yeni, 2026–2027)`,
+    meta: { inserted, total: list.length },
+  });
+
+  revalidatePath("/ayarlar");
+  revalidatePath("/raporlar");
+  revalidatePath("/takvim");
+  return { success: true, inserted, total: list.length };
 }
