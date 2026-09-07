@@ -40,6 +40,7 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/benim", req.url));
   }
 
+  // /takvim and /benim are open to both roles
   return NextResponse.next();
 });
 

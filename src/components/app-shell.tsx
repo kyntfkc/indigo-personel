@@ -8,6 +8,7 @@ import {
   QrCode,
   Clock,
   CalendarDays,
+  CalendarRange,
   BarChart3,
   LogOut,
   User,
@@ -23,12 +24,14 @@ const adminLinks = [
   { href: "/personel", label: "Personel", icon: Users },
   { href: "/kiosk", label: "Kiosk", icon: QrCode },
   { href: "/mesai", label: "Mesai", icon: Clock },
-  { href: "/izin", label: "İzin", icon: CalendarDays },
+  { href: "/takvim", label: "Takvim", icon: CalendarRange },
+  { href: "/izin", label: "İzin Onay", icon: CalendarDays },
   { href: "/raporlar", label: "Raporlar", icon: BarChart3 },
 ];
 
 const personelLinks = [
-  { href: "/benim", label: "Özet", icon: User },
+  { href: "/benim", label: "Profilim", icon: User },
+  { href: "/takvim", label: "Takvim", icon: CalendarDays },
   { href: "/benim/izin", label: "İzinlerim", icon: CalendarDays },
 ];
 

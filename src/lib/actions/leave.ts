@@ -1,10 +1,20 @@
 "use server";
 
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, gte, lte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { employees, leaveRequests } from "@/lib/db/schema";
+import { employees, frozenDates, leaveRequests } from "@/lib/db/schema";
+import { assertLeaveAllowed, getLeaveBalance } from "@/lib/leave-policy";
+
+function revalidateLeavePaths() {
+  revalidatePath("/izin");
+  revalidatePath("/benim/izin");
+  revalidatePath("/benim");
+  revalidatePath("/takvim");
+  revalidatePath("/personel");
+  revalidatePath("/");
+}
 
 export async function createLeaveRequest(formData: FormData) {
   const session = await auth();
@@ -27,9 +37,14 @@ export async function createLeaveRequest(formData: FormData) {
   if (!type || !startDate || !endDate) {
     return { error: "Eksik alanlar" };
   }
-  if (endDate < startDate) {
-    return { error: "Bitiş tarihi başlangıçtan önce olamaz" };
-  }
+
+  const check = await assertLeaveAllowed({
+    employeeId,
+    startDate,
+    endDate,
+    type,
+  });
+  if (!check.ok) return { error: check.error };
 
   const db = getDb();
   await db.insert(leaveRequests).values({
@@ -41,9 +56,7 @@ export async function createLeaveRequest(formData: FormData) {
     status: "beklemede",
   });
 
-  revalidatePath("/izin");
-  revalidatePath("/benim/izin");
-  revalidatePath("/");
+  revalidateLeavePaths();
   return { success: true };
 }
 
@@ -102,9 +115,7 @@ export async function reviewLeaveRequest(
     })
     .where(eq(leaveRequests.id, id));
 
-  revalidatePath("/izin");
-  revalidatePath("/benim/izin");
-  revalidatePath("/");
+  revalidateLeavePaths();
   return { success: true };
 }
 
@@ -136,4 +147,102 @@ export async function getPendingLeaveCount() {
     .from(leaveRequests)
     .where(eq(leaveRequests.status, "beklemede"));
   return rows.length;
+}
+
+export async function fetchLeaveBalance(employeeId: string) {
+  const session = await auth();
+  if (!session?.user) throw new Error("Yetkisiz");
+  if (
+    session.user.role !== "admin" &&
+    session.user.employeeId !== employeeId
+  ) {
+    throw new Error("Yetkisiz");
+  }
+  return getLeaveBalance(employeeId);
+}
+
+export async function getCalendarLeaveData(from: string, to: string) {
+  const session = await auth();
+  if (!session?.user) throw new Error("Yetkisiz");
+
+  const db = getDb();
+
+  const leaves = await db
+    .select({
+      id: leaveRequests.id,
+      type: leaveRequests.type,
+      startDate: leaveRequests.startDate,
+      endDate: leaveRequests.endDate,
+      status: leaveRequests.status,
+      note: leaveRequests.note,
+      employeeId: employees.id,
+      firstName: employees.firstName,
+      lastName: employees.lastName,
+    })
+    .from(leaveRequests)
+    .innerJoin(employees, eq(leaveRequests.employeeId, employees.id))
+    .where(
+      and(
+        lte(leaveRequests.startDate, to),
+        gte(leaveRequests.endDate, from),
+        // show pending + approved on calendar
+      )
+    );
+
+  const visible = leaves.filter(
+    (l) => l.status === "beklemede" || l.status === "onaylandi"
+  );
+
+  const frozen = await db
+    .select()
+    .from(frozenDates)
+    .where(and(gte(frozenDates.date, from), lte(frozenDates.date, to)))
+    .orderBy(frozenDates.date);
+
+  return { leaves: visible, frozen };
+}
+
+export async function listFrozenDates() {
+  const session = await auth();
+  if (!session?.user) throw new Error("Yetkisiz");
+
+  const db = getDb();
+  return db.select().from(frozenDates).orderBy(desc(frozenDates.date));
+}
+
+export async function addFrozenDate(formData: FormData) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    return { error: "Yetkisiz" };
+  }
+
+  const date = String(formData.get("date") || "");
+  const reason = String(formData.get("reason") || "").trim() || null;
+  if (!date) return { error: "Tarih gerekli" };
+
+  const db = getDb();
+  try {
+    await db.insert(frozenDates).values({
+      date,
+      reason,
+      createdBy: session.user.id,
+    });
+  } catch {
+    return { error: "Bu tarih zaten dondurulmuş" };
+  }
+
+  revalidateLeavePaths();
+  return { success: true };
+}
+
+export async function removeFrozenDate(id: string) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    return { error: "Yetkisiz" };
+  }
+
+  const db = getDb();
+  await db.delete(frozenDates).where(eq(frozenDates.id, id));
+  revalidateLeavePaths();
+  return { success: true };
 }

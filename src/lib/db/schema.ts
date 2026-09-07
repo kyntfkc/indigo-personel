@@ -91,6 +91,18 @@ export const leaveRequests = pgTable("leave_requests", {
     .notNull(),
 });
 
+export const frozenDates = pgTable("frozen_dates", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  date: date("date").notNull().unique(),
+  reason: text("reason"),
+  createdBy: uuid("created_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 export const usersRelations = relations(users, ({ one }) => ({
   employee: one(employees, {
     fields: [users.id],
@@ -125,7 +137,15 @@ export const leaveRequestsRelations = relations(leaveRequests, ({ one }) => ({
   }),
 }));
 
+export const frozenDatesRelations = relations(frozenDates, ({ one }) => ({
+  creator: one(users, {
+    fields: [frozenDates.createdBy],
+    references: [users.id],
+  }),
+}));
+
 export type User = typeof users.$inferSelect;
 export type Employee = typeof employees.$inferSelect;
 export type Attendance = typeof attendance.$inferSelect;
 export type LeaveRequest = typeof leaveRequests.$inferSelect;
+export type FrozenDate = typeof frozenDates.$inferSelect;
