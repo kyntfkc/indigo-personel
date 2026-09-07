@@ -16,18 +16,18 @@ export default function LoginForm() {
     setError("");
     setLoading(true);
     const form = new FormData(e.currentTarget);
-    const email = String(form.get("email") || "");
+    const login = String(form.get("login") || "");
     const password = String(form.get("password") || "");
 
     const res = await signIn("credentials", {
-      email,
+      login,
       password,
       redirect: false,
     });
 
     setLoading(false);
     if (res?.error) {
-      setError("E-posta veya şifre hatalı");
+      setError("Kullanıcı adı / e-posta veya şifre hatalı");
       return;
     }
 
@@ -41,19 +41,22 @@ export default function LoginForm() {
       <div className="panel w-full max-w-md !p-8">
         <div className="mb-8 flex flex-col items-center gap-2 text-center">
           <IndigoLogo />
-          <p className="text-sm text-[var(--ink-muted)]">Personel takip sistemine giriş</p>
+          <p className="text-sm text-[var(--ink-muted)]">
+            Personel takip sistemine giriş
+          </p>
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[var(--ink)]">
-              E-posta
+              Kullanıcı adı / E-posta
             </label>
             <input
-              name="email"
-              type="email"
+              name="login"
+              type="text"
               required
-              autoComplete="email"
+              autoComplete="username"
+              placeholder="Personel: kullanıcı adı · Admin: e-posta"
               className="w-full rounded-full border border-[var(--border)] bg-white px-4 py-2.5 text-sm outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-soft)]"
             />
           </div>

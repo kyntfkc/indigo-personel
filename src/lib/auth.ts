@@ -1,7 +1,7 @@
 import NextAuth, { type DefaultSession } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { users, employees } from "@/lib/db/schema";
 
@@ -28,22 +28,35 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       credentials: {
-        email: { label: "E-posta", type: "email" },
+        login: { label: "Kullanıcı adı veya e-posta", type: "text" },
         password: { label: "Şifre", type: "password" },
       },
       async authorize(credentials) {
-        const email = credentials?.email as string | undefined;
+        const login = String(credentials?.login || "")
+          .trim()
+          .toLowerCase();
         const password = credentials?.password as string | undefined;
-        if (!email || !password) return null;
+        if (!login || !password) return null;
 
         const db = getDb();
+        const isEmail = login.includes("@");
+
         const [user] = await db
           .select()
           .from(users)
-          .where(eq(users.email, email.toLowerCase().trim()))
+          .where(
+            isEmail
+              ? eq(users.email, login)
+              : sql`lower(${users.username}) = ${login}`
+          )
           .limit(1);
 
         if (!user) return null;
+
+        // Personel: kullanıcı adı zorunlu (eski hesaplarda username yoksa e-posta kabul)
+        if (user.role === "personel" && isEmail && user.username) {
+          return null;
+        }
 
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) return null;
@@ -56,12 +69,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         return {
           id: user.id,
-          email: user.email,
+          email: user.email ?? user.username ?? "",
           role: user.role,
           employeeId: employee?.id ?? null,
           name: employee
             ? `${employee.firstName} ${employee.lastName}`
-            : user.email,
+            : user.username ?? user.email ?? "",
         };
       },
     }),

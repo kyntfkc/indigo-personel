@@ -52,31 +52,52 @@ export async function createInitialAdmin(formData: FormData) {
 }
 
 export async function createPersonelUser(input: {
-  email: string;
+  username: string;
   password: string;
   employeeId: string;
+  email?: string | null;
 }) {
   const session = await auth();
   if (session?.user?.role !== "admin") {
     return { error: "Yetkisiz" };
   }
 
-  const email = input.email.toLowerCase().trim();
+  const username = input.username.trim().toLowerCase();
+  if (!/^[a-z0-9._-]{3,32}$/.test(username)) {
+    return {
+      error:
+        "Kullanıcı adı 3–32 karakter; harf, rakam, nokta, _ veya - olmalı",
+    };
+  }
+
+  const email = input.email?.toLowerCase().trim() || null;
   const db = getDb();
 
-  const [existing] = await db
+  const [existingUsername] = await db
     .select()
     .from(users)
-    .where(eq(users.email, email))
+    .where(eq(users.username, username))
     .limit(1);
-  if (existing) {
-    return { error: "Bu e-posta zaten kayıtlı" };
+  if (existingUsername) {
+    return { error: "Bu kullanıcı adı zaten kayıtlı" };
+  }
+
+  if (email) {
+    const [existingEmail] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+    if (existingEmail) {
+      return { error: "Bu e-posta zaten kayıtlı" };
+    }
   }
 
   const passwordHash = await bcrypt.hash(input.password, 10);
   const [user] = await db
     .insert(users)
     .values({
+      username,
       email,
       passwordHash,
       role: "personel",

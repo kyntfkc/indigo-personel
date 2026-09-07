@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { put, del } from "@vercel/blob";
 import { auth } from "@/lib/auth";
@@ -77,6 +77,9 @@ export async function createEmployee(formData: FormData) {
     String(formData.get("emergencyContact") || "").trim() || null;
   const notes = String(formData.get("notes") || "").trim() || null;
   const createLogin = formData.get("createLogin") === "on";
+  const username = String(formData.get("username") || "")
+    .trim()
+    .toLowerCase();
   const password = String(formData.get("password") || "");
 
   if (!firstName || !lastName) {
@@ -85,21 +88,36 @@ export async function createEmployee(formData: FormData) {
 
   let userId: string | null = null;
   if (createLogin) {
-    if (!email) return { error: "Giriş hesabı için e-posta gerekli" };
+    if (!/^[a-z0-9._-]{3,32}$/.test(username)) {
+      return {
+        error:
+          "Kullanıcı adı 3–32 karakter; harf, rakam, nokta, _ veya - olmalı",
+      };
+    }
     if (password.length < 6) return { error: "Şifre en az 6 karakter olmalı" };
 
-    const [existing] = await db
+    const [existingUsername] = await db
       .select()
       .from(users)
-      .where(eq(users.email, email.toLowerCase()))
+      .where(sql`lower(${users.username}) = ${username}`)
       .limit(1);
-    if (existing) return { error: "Bu e-posta zaten kayıtlı" };
+    if (existingUsername) return { error: "Bu kullanıcı adı zaten kayıtlı" };
+
+    if (email) {
+      const [existingEmail] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email.toLowerCase()))
+        .limit(1);
+      if (existingEmail) return { error: "Bu e-posta zaten kayıtlı" };
+    }
 
     const passwordHash = await bcrypt.hash(password, 10);
     const [user] = await db
       .insert(users)
       .values({
-        email: email.toLowerCase(),
+        username,
+        email: email ? email.toLowerCase() : null,
         passwordHash,
         role: "personel",
       })

@@ -92,10 +92,30 @@ export function EmployeeCreateDialog() {
             Giriş hesabı oluştur
           </label>
           {createLogin && (
-            <div>
-              <label className="mb-1 block text-sm">Şifre</label>
-              <input name="password" type="password" minLength={6} required={createLogin} className={field} />
-            </div>
+            <>
+              <div>
+                <label className="mb-1 block text-sm">Kullanıcı adı</label>
+                <input
+                  name="username"
+                  required={createLogin}
+                  minLength={3}
+                  maxLength={32}
+                  pattern="[a-zA-Z0-9._\-]+"
+                  placeholder="ornek.kullanici"
+                  className={field}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm">Şifre</label>
+                <input
+                  name="password"
+                  type="password"
+                  minLength={6}
+                  required={createLogin}
+                  className={field}
+                />
+              </div>
+            </>
           )}
           <button type="submit" disabled={loading} className="btn-primary w-full">
             {loading ? "Kaydediliyor..." : "Kaydet"}

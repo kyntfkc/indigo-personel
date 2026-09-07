@@ -28,7 +28,8 @@ export const leaveStatusEnum = pgEnum("leave_status", [
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
-  email: text("email").notNull().unique(),
+  email: text("email").unique(),
+  username: text("username").unique(),
   passwordHash: text("password_hash").notNull(),
   role: roleEnum("role").notNull().default("personel"),
   createdAt: timestamp("created_at", { withTimezone: true })
