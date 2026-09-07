@@ -196,8 +196,10 @@ export async function getCalendarLeaveData(from: string, to: string) {
   const frozen = await db
     .select()
     .from(frozenDates)
-    .where(and(gte(frozenDates.date, from), lte(frozenDates.date, to)))
-    .orderBy(frozenDates.date);
+    .where(
+      and(lte(frozenDates.startDate, to), gte(frozenDates.endDate, from))
+    )
+    .orderBy(desc(frozenDates.startDate));
 
   return { leaves: visible, frozen };
 }
@@ -207,7 +209,7 @@ export async function listFrozenDates() {
   if (!session?.user) throw new Error("Yetkisiz");
 
   const db = getDb();
-  return db.select().from(frozenDates).orderBy(desc(frozenDates.date));
+  return db.select().from(frozenDates).orderBy(desc(frozenDates.startDate));
 }
 
 export async function addFrozenDate(formData: FormData) {
@@ -216,20 +218,35 @@ export async function addFrozenDate(formData: FormData) {
     return { error: "Yetkisiz" };
   }
 
-  const date = String(formData.get("date") || "");
+  const startDate = String(formData.get("startDate") || "");
+  const endDate = String(formData.get("endDate") || startDate);
   const reason = String(formData.get("reason") || "").trim() || null;
-  if (!date) return { error: "Tarih gerekli" };
+  if (!startDate || !endDate) return { error: "Tarih aralığı gerekli" };
+  if (endDate < startDate) {
+    return { error: "Bitiş tarihi başlangıçtan önce olamaz" };
+  }
 
   const db = getDb();
-  try {
-    await db.insert(frozenDates).values({
-      date,
-      reason,
-      createdBy: session.user.id,
-    });
-  } catch {
-    return { error: "Bu tarih zaten dondurulmuş" };
+  const overlapping = await db
+    .select()
+    .from(frozenDates)
+    .where(
+      and(
+        lte(frozenDates.startDate, endDate),
+        gte(frozenDates.endDate, startDate)
+      )
+    )
+    .limit(1);
+  if (overlapping.length > 0) {
+    return { error: "Bu aralık mevcut dondurulmuş günlerle çakışıyor" };
   }
+
+  await db.insert(frozenDates).values({
+    startDate,
+    endDate,
+    reason,
+    createdBy: session.user.id,
+  });
 
   revalidateLeavePaths();
   return { success: true };

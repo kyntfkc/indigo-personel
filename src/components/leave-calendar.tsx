@@ -44,7 +44,8 @@ export type CalendarLeave = {
 
 export type CalendarFrozen = {
   id: string;
-  date: string;
+  startDate: string;
+  endDate: string;
   reason: string | null;
 };
 
@@ -76,13 +77,21 @@ export function LeaveCalendar({
   const [rangeEnd, setRangeEnd] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pending, startTransition] = useTransition();
-  const [freezeDate, setFreezeDate] = useState("");
+  const [freezeStart, setFreezeStart] = useState("");
+  const [freezeEnd, setFreezeEnd] = useState("");
   const [freezeReason, setFreezeReason] = useState("");
 
-  const frozenSet = useMemo(
-    () => new Set(initialFrozen.map((f) => f.date)),
-    [initialFrozen]
-  );
+  const frozenSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const f of initialFrozen) {
+      const days = eachDayOfInterval({
+        start: parseISO(f.startDate),
+        end: parseISO(f.endDate),
+      });
+      for (const d of days) set.add(format(d, "yyyy-MM-dd"));
+    }
+    return set;
+  }, [initialFrozen]);
 
   const days = useMemo(() => {
     const start = startOfWeek(startOfMonth(month), { weekStartsOn: 1 });
@@ -148,7 +157,8 @@ export function LeaveCalendar({
   async function submitFreeze(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData();
-    form.set("date", freezeDate);
+    form.set("startDate", freezeStart);
+    form.set("endDate", freezeEnd || freezeStart);
     form.set("reason", freezeReason);
     startTransition(async () => {
       const result = await addFrozenDate(form);
@@ -156,8 +166,9 @@ export function LeaveCalendar({
         toast.error(result.error);
         return;
       }
-      toast.success("Gün donduruldu");
-      setFreezeDate("");
+      toast.success("Tarih aralığı donduruldu");
+      setFreezeStart("");
+      setFreezeEnd("");
       setFreezeReason("");
       router.refresh();
     });
@@ -301,17 +312,39 @@ export function LeaveCalendar({
           <h3 className="font-semibold">Dondurulmuş günler</h3>
           <form onSubmit={submitFreeze} className="flex flex-wrap items-end gap-3">
             <div>
-              <label className="mb-1 block text-xs text-[var(--ink-muted)]">Tarih</label>
+              <label className="mb-1 block text-xs text-[var(--ink-muted)]">
+                Başlangıç
+              </label>
               <input
                 type="date"
                 required
-                value={freezeDate}
-                onChange={(e) => setFreezeDate(e.target.value)}
+                value={freezeStart}
+                onChange={(e) => {
+                  setFreezeStart(e.target.value);
+                  if (!freezeEnd || freezeEnd < e.target.value) {
+                    setFreezeEnd(e.target.value);
+                  }
+                }}
+                className={field}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-[var(--ink-muted)]">
+                Bitiş
+              </label>
+              <input
+                type="date"
+                required
+                value={freezeEnd}
+                min={freezeStart || undefined}
+                onChange={(e) => setFreezeEnd(e.target.value)}
                 className={field}
               />
             </div>
             <div className="min-w-[200px] flex-1">
-              <label className="mb-1 block text-xs text-[var(--ink-muted)]">Neden</label>
+              <label className="mb-1 block text-xs text-[var(--ink-muted)]">
+                Neden
+              </label>
               <input
                 value={freezeReason}
                 onChange={(e) => setFreezeReason(e.target.value)}
@@ -325,7 +358,9 @@ export function LeaveCalendar({
           </form>
 
           {initialFrozen.length === 0 ? (
-            <p className="text-sm text-[var(--ink-muted)]">Henüz dondurulmuş gün yok.</p>
+            <p className="text-sm text-[var(--ink-muted)]">
+              Henüz dondurulmuş gün yok.
+            </p>
           ) : (
             <ul className="space-y-2">
               {initialFrozen.map((f) => (
@@ -335,10 +370,19 @@ export function LeaveCalendar({
                 >
                   <div>
                     <span className="font-medium">
-                      {format(parseISO(f.date), "d MMM yyyy", { locale: tr })}
+                      {format(parseISO(f.startDate), "d MMM yyyy", {
+                        locale: tr,
+                      })}
+                      {f.endDate !== f.startDate
+                        ? ` – ${format(parseISO(f.endDate), "d MMM yyyy", {
+                            locale: tr,
+                          })}`
+                        : ""}
                     </span>
                     {f.reason && (
-                      <span className="ml-2 text-[var(--ink-muted)]">{f.reason}</span>
+                      <span className="ml-2 text-[var(--ink-muted)]">
+                        {f.reason}
+                      </span>
                     )}
                   </div>
                   <button

@@ -97,7 +97,8 @@ export const leaveRequests = pgTable("leave_requests", {
 
 export const frozenDates = pgTable("frozen_dates", {
   id: uuid("id").defaultRandom().primaryKey(),
-  date: date("date").notNull().unique(),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
   reason: text("reason"),
   createdBy: uuid("created_by").references(() => users.id, {
     onDelete: "set null",

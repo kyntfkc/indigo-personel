@@ -94,14 +94,23 @@ export async function assertLeaveAllowed(input: {
     .select()
     .from(frozenDates)
     .where(
-      and(gte(frozenDates.date, startDate), lte(frozenDates.date, endDate))
+      and(
+        lte(frozenDates.startDate, endDate),
+        gte(frozenDates.endDate, startDate)
+      )
     );
 
   if (frozen.length > 0) {
-    const dates = frozen.map((f) => f.date).join(", ");
+    const ranges = frozen
+      .map((f) =>
+        f.startDate === f.endDate
+          ? f.startDate
+          : `${f.startDate} – ${f.endDate}`
+      )
+      .join(", ");
     return {
       ok: false,
-      error: `Dondurulmuş günler seçilemez: ${dates}`,
+      error: `Dondurulmuş günler seçilemez: ${ranges}`,
     };
   }
 
