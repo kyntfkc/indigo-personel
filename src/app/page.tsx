@@ -87,7 +87,7 @@ export default async function DashboardPage() {
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-semibold text-[var(--ink)]">Açık Mesailer</h2>
               <Link href="/kiosk" className="btn-primary !py-1.5 !text-xs">
-                Kiosk Aç
+                Kapı QR
               </Link>
             </div>
             {summary.open.length === 0 ? (

@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 const adminLinks = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/personel", label: "Personel", icon: Users },
-  { href: "/kiosk", label: "Kiosk", icon: QrCode },
+  { href: "/kiosk", label: "Kapı QR", icon: QrCode },
   { href: "/mesai", label: "Mesai", icon: Clock },
   { href: "/takvim", label: "Takvim", icon: CalendarRange },
   { href: "/izin", label: "İzin Onay", icon: CalendarDays },

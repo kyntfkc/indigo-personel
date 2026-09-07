@@ -12,7 +12,6 @@ import {
   getMyLeaveRequests,
 } from "@/lib/actions/leave";
 import { getEmployeeMonthHours } from "@/lib/actions/reports";
-import { MyQr } from "@/components/my-qr";
 import {
   LeaveBalanceCard,
   LeaveHistoryList,
@@ -103,7 +102,13 @@ export default async function BenimPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <MyQr token={employee.qrToken} name={name} />
+          <section className="panel">
+            <h2 className="mb-2 font-semibold">Mesai girişi</h2>
+            <p className="text-sm text-[var(--ink-muted)]">
+              Kapıdaki QR kodu telefonunuzla okutun. Akşam zorunlu çıkış yok;
+              çıkış yapılmazsa sistem otomatik 18:00 kaydı oluşturur.
+            </p>
+          </section>
 
           <section className="panel">
             <div className="mb-4 flex items-center justify-between">

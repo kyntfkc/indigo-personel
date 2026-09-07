@@ -2,7 +2,6 @@ import { auth } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { getEmployee } from "@/lib/actions/employees";
-import { EmployeeQrCard } from "@/components/employee-qr-card";
 import { EmployeeEditForm } from "@/components/employee-edit-form";
 import { EmployeeProfileHeader } from "@/components/employee-profile-header";
 import { PhotoUpload } from "@/components/photo-upload";
@@ -80,12 +79,6 @@ export default async function PersonelDetailPage({
             <EmployeeEditForm employee={employee} mode="admin" />
           </div>
         </div>
-
-        <EmployeeQrCard
-          employeeId={employee.id}
-          qrToken={employee.qrToken}
-          name={name}
-        />
       </div>
     </AppShell>
   );

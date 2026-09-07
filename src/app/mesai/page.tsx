@@ -129,7 +129,13 @@ export default async function MesaiPage({
                       })}
                     </td>
                     <td className="px-4 py-3 text-[var(--ink-muted)]">
-                      {r.method === "qr" ? "QR" : "Manuel"}
+                      {r.method === "qr"
+                        ? "QR"
+                        : r.method === "otomatik"
+                          ? "Otomatik"
+                          : r.method === "yuz"
+                            ? "Yüz"
+                            : "Manuel"}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <DeleteAttendanceButton id={r.id} />

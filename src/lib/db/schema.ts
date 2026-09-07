@@ -14,6 +14,8 @@ export const attendanceTypeEnum = pgEnum("attendance_type", ["giris", "cikis"]);
 export const attendanceMethodEnum = pgEnum("attendance_method", [
   "qr",
   "manuel",
+  "otomatik",
+  "yuz",
 ]);
 export const leaveTypeEnum = pgEnum("leave_type", [
   "yillik",
@@ -108,6 +110,16 @@ export const frozenDates = pgTable("frozen_dates", {
     .notNull(),
 });
 
+export const doorStations = pgTable("door_stations", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull().default("Ana Kapı"),
+  token: text("token").notNull().unique(),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 export const usersRelations = relations(users, ({ one }) => ({
   employee: one(employees, {
     fields: [users.id],
@@ -154,3 +166,4 @@ export type Employee = typeof employees.$inferSelect;
 export type Attendance = typeof attendance.$inferSelect;
 export type LeaveRequest = typeof leaveRequests.$inferSelect;
 export type FrozenDate = typeof frozenDates.$inferSelect;
+export type DoorStation = typeof doorStations.$inferSelect;
