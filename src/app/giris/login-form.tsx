@@ -40,7 +40,7 @@ export default function LoginForm() {
     <div className="flex min-h-dvh items-center justify-center bg-[var(--bg-muted)] px-4">
       <div className="panel w-full max-w-md !p-8">
         <div className="mb-8 flex flex-col items-center gap-2 text-center">
-          <IndigoLogo />
+          <IndigoLogo size="lg" />
           <p className="text-sm text-[var(--ink-muted)]">
             Personel takip sistemine giriş
           </p>

@@ -29,7 +29,7 @@ export default function KurulumForm() {
     <div className="flex min-h-dvh items-center justify-center bg-[var(--bg-muted)] px-4">
       <div className="panel w-full max-w-md !p-8">
         <div className="mb-8 flex flex-col items-center gap-2 text-center">
-          <IndigoLogo />
+          <IndigoLogo size="lg" />
           <h1 className="text-xl font-semibold text-[var(--ink)]">İlk Kurulum</h1>
           <p className="text-sm text-[var(--ink-muted)]">
             Yönetici hesabı oluşturun
