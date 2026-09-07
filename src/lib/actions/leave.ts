@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { employees, frozenDates, leaveRequests } from "@/lib/db/schema";
 import { assertLeaveAllowed, getLeaveBalance } from "@/lib/leave-policy";
+import { writeAudit } from "@/lib/audit";
 
 function revalidateLeavePaths() {
   revalidatePath("/izin");
@@ -116,6 +117,12 @@ export async function reviewLeaveRequest(
     .where(eq(leaveRequests.id, id));
 
   revalidateLeavePaths();
+  await writeAudit({
+    action: `leave.${status}`,
+    entityType: "leave_request",
+    entityId: id,
+    summary: `İzin ${status === "onaylandi" ? "onaylandı" : "reddedildi"}`,
+  });
   return { success: true };
 }
 

@@ -1,11 +1,15 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { asc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
+import { writeAudit } from "@/lib/audit";
 import { getDb } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { holidays, siteSettings, users } from "@/lib/db/schema";
+
+const WORK_START_KEY = "work_start_time";
+const DEFAULT_WORK_START = "09:00";
 
 async function requireAdmin() {
   const session = await auth();
@@ -62,13 +66,126 @@ export async function createAdmin(formData: FormData) {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
-  await db.insert(users).values({
-    email,
-    username: null,
-    passwordHash,
-    role: "admin",
+  const [created] = await db
+    .insert(users)
+    .values({
+      email,
+      username: null,
+      passwordHash,
+      role: "admin",
+    })
+    .returning({ id: users.id });
+
+  await writeAudit({
+    action: "admin.create",
+    entityType: "user",
+    entityId: created.id,
+    summary: `Admin eklendi: ${email}`,
   });
 
   revalidatePath("/ayarlar");
+  return { success: true };
+}
+
+export async function getWorkStartTime() {
+  const db = getDb();
+  const [row] = await db
+    .select()
+    .from(siteSettings)
+    .where(eq(siteSettings.key, WORK_START_KEY))
+    .limit(1);
+  return row?.value || DEFAULT_WORK_START;
+}
+
+export async function setWorkStartTime(formData: FormData) {
+  await requireAdmin();
+  const value = String(formData.get("workStartTime") || "").trim();
+  if (!/^\d{2}:\d{2}$/.test(value)) {
+    return { error: "Saat HH:MM formatında olmalı" };
+  }
+  const [h, m] = value.split(":").map(Number);
+  if (h > 23 || m > 59) return { error: "Geçersiz saat" };
+
+  const db = getDb();
+  await db
+    .insert(siteSettings)
+    .values({ key: WORK_START_KEY, value, updatedAt: new Date() })
+    .onConflictDoUpdate({
+      target: siteSettings.key,
+      set: { value, updatedAt: new Date() },
+    });
+
+  await writeAudit({
+    action: "settings.work_start",
+    entityType: "site_settings",
+    entityId: WORK_START_KEY,
+    summary: `Mesai başlangıcı ${value} olarak güncellendi`,
+  });
+
+  revalidatePath("/ayarlar");
+  revalidatePath("/raporlar");
+  return { success: true };
+}
+
+export async function listHolidays() {
+  await requireAdmin();
+  const db = getDb();
+  return db.select().from(holidays).orderBy(desc(holidays.date));
+}
+
+export async function addHoliday(formData: FormData) {
+  const session = await requireAdmin();
+  const date = String(formData.get("date") || "");
+  const name = String(formData.get("name") || "").trim();
+  if (!date || !name) return { error: "Tarih ve ad gerekli" };
+
+  const db = getDb();
+  try {
+    const [row] = await db
+      .insert(holidays)
+      .values({
+        date,
+        name,
+        createdBy: session.user.id,
+      })
+      .returning();
+
+    await writeAudit({
+      action: "holiday.create",
+      entityType: "holiday",
+      entityId: row.id,
+      summary: `Resmi tatil eklendi: ${date} ${name}`,
+    });
+  } catch {
+    return { error: "Bu tarih zaten kayıtlı" };
+  }
+
+  revalidatePath("/ayarlar");
+  revalidatePath("/raporlar");
+  revalidatePath("/takvim");
+  return { success: true };
+}
+
+export async function removeHoliday(id: string) {
+  await requireAdmin();
+  const db = getDb();
+  const [row] = await db
+    .select()
+    .from(holidays)
+    .where(eq(holidays.id, id))
+    .limit(1);
+  if (!row) return { error: "Bulunamadı" };
+
+  await db.delete(holidays).where(eq(holidays.id, id));
+  await writeAudit({
+    action: "holiday.delete",
+    entityType: "holiday",
+    entityId: id,
+    summary: `Resmi tatil silindi: ${row.date} ${row.name}`,
+  });
+
+  revalidatePath("/ayarlar");
+  revalidatePath("/raporlar");
+  revalidatePath("/takvim");
   return { success: true };
 }

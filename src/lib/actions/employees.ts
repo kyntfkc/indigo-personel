@@ -8,6 +8,7 @@ import { getDb } from "@/lib/db";
 import { employees, users } from "@/lib/db/schema";
 import { generateQrToken } from "@/lib/utils-app";
 import bcrypt from "bcryptjs";
+import { writeAudit } from "@/lib/audit";
 
 async function requireAdmin() {
   const session = await auth();
@@ -145,6 +146,12 @@ export async function createEmployee(formData: FormData) {
 
   revalidatePath("/personel");
   revalidatePath("/");
+  await writeAudit({
+    action: "employee.create",
+    entityType: "employee",
+    entityId: employee.id,
+    summary: `Personel eklendi: ${firstName} ${lastName}`,
+  });
   return { success: true, id: employee.id };
 }
 
@@ -205,6 +212,14 @@ export async function updateEmployee(id: string, formData: FormData) {
   revalidatePath(`/personel/${id}`);
   revalidatePath("/benim");
   revalidatePath("/");
+  await writeAudit({
+    action: isAdmin ? "employee.update" : "employee.self_update",
+    entityType: "employee",
+    entityId: id,
+    summary: isAdmin
+      ? `Personel güncellendi: ${id}`
+      : `Personel kendi profilini güncelledi`,
+  });
   return { success: true };
 }
 

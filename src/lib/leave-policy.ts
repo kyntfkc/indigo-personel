@@ -1,7 +1,12 @@
 import { and, eq, gte, lte } from "drizzle-orm";
 import { differenceInCalendarDays, parseISO } from "date-fns";
 import { getDb } from "@/lib/db";
-import { employees, frozenDates, leaveRequests } from "@/lib/db/schema";
+import {
+  employees,
+  frozenDates,
+  holidays,
+  leaveRequests,
+} from "@/lib/db/schema";
 
 export function getEntitlementDays(
   hireDate: string | null | undefined,
@@ -111,6 +116,19 @@ export async function assertLeaveAllowed(input: {
     return {
       ok: false,
       error: `Dondurulmuş günler seçilemez: ${ranges}`,
+    };
+  }
+
+  const holidayRows = await db
+    .select()
+    .from(holidays)
+    .where(and(gte(holidays.date, startDate), lte(holidays.date, endDate)));
+
+  if (holidayRows.length > 0) {
+    const dates = holidayRows.map((h) => `${h.date} (${h.name})`).join(", ");
+    return {
+      ok: false,
+      error: `Resmi tatiller seçilemez: ${dates}`,
     };
   }
 

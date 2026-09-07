@@ -12,6 +12,7 @@ import {
   istanbulEighteenHundred,
   previousIstanbulDateKey,
 } from "@/lib/istanbul-time";
+import { writeAudit } from "@/lib/audit";
 
 const COOLDOWN_MS = 60_000;
 
@@ -121,6 +122,12 @@ export async function regenerateDoorToken() {
     .where(eq(doorStations.id, station.id))
     .returning();
   revalidatePath("/kiosk");
+  await writeAudit({
+    action: "door.token_regenerate",
+    entityType: "door_station",
+    entityId: updated.id,
+    summary: "Kapı QR token yenilendi",
+  });
   return { success: true as const, station: updated };
 }
 
@@ -185,6 +192,16 @@ export async function autoCheckoutOpenShifts(dayKey?: string) {
       skipCooldown: true,
     });
     closed += 1;
+  }
+
+  if (closed > 0) {
+    await writeAudit({
+      action: "attendance.auto_checkout",
+      entityType: "attendance",
+      entityId: targetDay,
+      summary: `Otomatik 18:00 çıkış: ${closed} kişi (${targetDay})`,
+      actorUserId: null,
+    });
   }
 
   return { success: true as const, dayKey: targetDay, closed };
@@ -255,6 +272,13 @@ export async function createManualAttendance(formData: FormData) {
 
   revalidatePath("/mesai");
   revalidatePath("/");
+  await writeAudit({
+    action: "attendance.manual",
+    entityType: "attendance",
+    entityId: employeeId,
+    summary: `Manuel ${type} kaydı`,
+    meta: { recordedAt, note },
+  });
   return { success: true };
 }
 

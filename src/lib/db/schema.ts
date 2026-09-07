@@ -120,6 +120,41 @@ export const doorStations = pgTable("door_stations", {
     .notNull(),
 });
 
+export const holidays = pgTable("holidays", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  date: date("date").notNull().unique(),
+  name: text("name").notNull(),
+  createdBy: uuid("created_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export const siteSettings = pgTable("site_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export const auditLogs = pgTable("audit_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  actorUserId: uuid("actor_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  action: text("action").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityId: text("entity_id"),
+  summary: text("summary").notNull(),
+  meta: text("meta"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
 export const usersRelations = relations(users, ({ one }) => ({
   employee: one(employees, {
     fields: [users.id],
@@ -167,3 +202,6 @@ export type Attendance = typeof attendance.$inferSelect;
 export type LeaveRequest = typeof leaveRequests.$inferSelect;
 export type FrozenDate = typeof frozenDates.$inferSelect;
 export type DoorStation = typeof doorStations.$inferSelect;
+export type Holiday = typeof holidays.$inferSelect;
+export type SiteSetting = typeof siteSettings.$inferSelect;
+export type AuditLog = typeof auditLogs.$inferSelect;

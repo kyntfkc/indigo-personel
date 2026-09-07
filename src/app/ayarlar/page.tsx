@@ -6,13 +6,25 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { AppShell } from "@/components/app-shell";
 import { AdminCreateForm } from "@/components/admin-create-form";
-import { listAdmins } from "@/lib/actions/settings";
+import {
+  HolidaysPanel,
+  WorkStartForm,
+} from "@/components/settings-work-holidays";
+import {
+  getWorkStartTime,
+  listAdmins,
+  listHolidays,
+} from "@/lib/actions/settings";
 
 export default async function AyarlarPage() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/giris");
 
-  const admins = await listAdmins();
+  const [admins, workStart, holidays] = await Promise.all([
+    listAdmins(),
+    getWorkStartTime(),
+    listHolidays(),
+  ]);
 
   return (
     <AppShell role="admin" userName={session.user.name || session.user.email}>
@@ -20,8 +32,13 @@ export default async function AyarlarPage() {
         <div>
           <h1 className="text-2xl font-semibold text-[var(--ink)]">Ayarlar</h1>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
-            Yönetici hesaplarını yönetin
+            Yönetici, mesai saati ve resmi tatiller
           </p>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <WorkStartForm workStart={workStart} />
+          <HolidaysPanel holidays={holidays} />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">

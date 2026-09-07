@@ -1,9 +1,23 @@
 "use server";
 
-import { and, eq, gte, lte } from "drizzle-orm";
+import { and, desc, eq, gte, lte } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { attendance, employees, leaveRequests } from "@/lib/db/schema";
+import {
+  attendance,
+  auditLogs,
+  employees,
+  leaveRequests,
+  users,
+} from "@/lib/db/schema";
+import { getWorkStartTime } from "@/lib/actions/settings";
+import {
+  eachDayKeys,
+  isWorkDay,
+  loadHolidaySet,
+  workStartDateTime,
+} from "@/lib/work-calendar";
+import { istanbulDateKey } from "@/lib/istanbul-time";
 
 function monthRange(year: number, month: number) {
   const from = new Date(year, month - 1, 1, 0, 0, 0, 0);
@@ -29,7 +43,7 @@ function calcHoursFromRecords(
   const daysPresent = new Set(
     empRecords
       .filter((r) => r.type === "giris")
-      .map((r) => new Date(r.recordedAt).toISOString().slice(0, 10))
+      .map((r) => istanbulDateKey(new Date(r.recordedAt)))
   ).size;
 
   return {
@@ -140,9 +154,8 @@ export async function getMonthlyReport(year: number, month: number) {
     month,
     employees: byEmployee,
     totals: {
-      totalHours: Math.round(
-        byEmployee.reduce((s, e) => s + e.hours, 0) * 10
-      ) / 10,
+      totalHours:
+        Math.round(byEmployee.reduce((s, e) => s + e.hours, 0) * 10) / 10,
       avgHours:
         byEmployee.length > 0
           ? Math.round(
@@ -154,4 +167,204 @@ export async function getMonthlyReport(year: number, month: number) {
       totalLeaveDays: byEmployee.reduce((s, e) => s + e.leaveDays, 0),
     },
   };
+}
+
+export async function getLateArrivals(fromKey: string, toKey: string) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    throw new Error("Yetkisiz");
+  }
+
+  const workStart = await getWorkStartTime();
+  const holidaySet = await loadHolidaySet(fromKey, toKey);
+  const workDays = eachDayKeys(fromKey, toKey).filter((d) =>
+    isWorkDay(d, holidaySet)
+  );
+
+  const db = getDb();
+  const from = new Date(`${fromKey}T00:00:00+03:00`);
+  const to = new Date(`${toKey}T23:59:59.999+03:00`);
+
+  const records = await db
+    .select({
+      employeeId: attendance.employeeId,
+      recordedAt: attendance.recordedAt,
+      type: attendance.type,
+      firstName: employees.firstName,
+      lastName: employees.lastName,
+      department: employees.department,
+    })
+    .from(attendance)
+    .innerJoin(employees, eq(attendance.employeeId, employees.id))
+    .where(
+      and(
+        eq(attendance.type, "giris"),
+        gte(attendance.recordedAt, from),
+        lte(attendance.recordedAt, to)
+      )
+    )
+    .orderBy(attendance.recordedAt);
+
+  const firstGiris = new Map<string, (typeof records)[0]>();
+  for (const row of records) {
+    const day = istanbulDateKey(new Date(row.recordedAt));
+    const key = `${row.employeeId}|${day}`;
+    if (!firstGiris.has(key)) firstGiris.set(key, row);
+  }
+
+  const late: {
+    employeeId: string;
+    name: string;
+    department: string | null;
+    dayKey: string;
+    checkInAt: string;
+    workStart: string;
+    lateMinutes: number;
+  }[] = [];
+
+  for (const day of workDays) {
+    const startAt = workStartDateTime(day, workStart);
+    for (const [mapKey, row] of firstGiris) {
+      if (!mapKey.endsWith(`|${day}`)) continue;
+      const checkIn = new Date(row.recordedAt);
+      if (checkIn <= startAt) continue;
+      const lateMinutes = Math.round(
+        (checkIn.getTime() - startAt.getTime()) / 60000
+      );
+      late.push({
+        employeeId: row.employeeId,
+        name: `${row.firstName} ${row.lastName}`,
+        department: row.department,
+        dayKey: day,
+        checkInAt: checkIn.toISOString(),
+        workStart,
+        lateMinutes,
+      });
+    }
+  }
+
+  late.sort((a, b) =>
+    a.dayKey === b.dayKey
+      ? b.lateMinutes - a.lateMinutes
+      : b.dayKey.localeCompare(a.dayKey)
+  );
+
+  return { fromKey, toKey, workStart, rows: late };
+}
+
+export async function getAbsences(fromKey: string, toKey: string) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    throw new Error("Yetkisiz");
+  }
+
+  const holidaySet = await loadHolidaySet(fromKey, toKey);
+  const workDays = eachDayKeys(fromKey, toKey).filter((d) =>
+    isWorkDay(d, holidaySet)
+  );
+
+  const db = getDb();
+  const activeEmployees = await db
+    .select()
+    .from(employees)
+    .where(eq(employees.active, true));
+
+  const from = new Date(`${fromKey}T00:00:00+03:00`);
+  const to = new Date(`${toKey}T23:59:59.999+03:00`);
+
+  const girisRecords = await db
+    .select({
+      employeeId: attendance.employeeId,
+      recordedAt: attendance.recordedAt,
+    })
+    .from(attendance)
+    .where(
+      and(
+        eq(attendance.type, "giris"),
+        gte(attendance.recordedAt, from),
+        lte(attendance.recordedAt, to)
+      )
+    );
+
+  const present = new Set(
+    girisRecords.map(
+      (r) => `${r.employeeId}|${istanbulDateKey(new Date(r.recordedAt))}`
+    )
+  );
+
+  const leaves = await db
+    .select()
+    .from(leaveRequests)
+    .where(
+      and(
+        eq(leaveRequests.status, "onaylandi"),
+        lte(leaveRequests.startDate, toKey),
+        gte(leaveRequests.endDate, fromKey)
+      )
+    );
+
+  const onLeave = (employeeId: string, day: string) =>
+    leaves.some(
+      (l) =>
+        l.employeeId === employeeId && l.startDate <= day && l.endDate >= day
+    );
+
+  const rows: {
+    employeeId: string;
+    name: string;
+    department: string | null;
+    dayKey: string;
+  }[] = [];
+
+  for (const day of workDays) {
+    for (const emp of activeEmployees) {
+      if (present.has(`${emp.id}|${day}`)) continue;
+      if (onLeave(emp.id, day)) continue;
+      rows.push({
+        employeeId: emp.id,
+        name: `${emp.firstName} ${emp.lastName}`,
+        department: emp.department,
+        dayKey: day,
+      });
+    }
+  }
+
+  rows.sort((a, b) =>
+    a.dayKey === b.dayKey
+      ? a.name.localeCompare(b.name, "tr")
+      : b.dayKey.localeCompare(a.dayKey)
+  );
+
+  return { fromKey, toKey, rows };
+}
+
+export async function listAuditLogs(options?: {
+  action?: string;
+  limit?: number;
+}) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    throw new Error("Yetkisiz");
+  }
+
+  const db = getDb();
+  const limit = options?.limit ?? 200;
+
+  return db
+    .select({
+      id: auditLogs.id,
+      action: auditLogs.action,
+      entityType: auditLogs.entityType,
+      entityId: auditLogs.entityId,
+      summary: auditLogs.summary,
+      meta: auditLogs.meta,
+      createdAt: auditLogs.createdAt,
+      actorEmail: users.email,
+      actorUsername: users.username,
+    })
+    .from(auditLogs)
+    .leftJoin(users, eq(auditLogs.actorUserId, users.id))
+    .where(options?.action ? eq(auditLogs.action, options.action) : undefined)
+    .orderBy(desc(auditLogs.createdAt))
+    .limit(limit);
 }
