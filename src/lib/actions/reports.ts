@@ -18,6 +18,10 @@ import {
   workStartDateTime,
 } from "@/lib/work-calendar";
 import { istanbulDateKey } from "@/lib/istanbul-time";
+import {
+  countLeaveDays,
+  getEntitlementDays,
+} from "@/lib/leave-policy";
 
 function monthRange(year: number, month: number) {
   const from = new Date(year, month - 1, 1, 0, 0, 0, 0);
@@ -367,4 +371,69 @@ export async function listAuditLogs(options?: {
     .where(options?.action ? eq(auditLogs.action, options.action) : undefined)
     .orderBy(desc(auditLogs.createdAt))
     .limit(limit);
+}
+
+export async function getLeaveBalanceReport() {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    throw new Error("Yetkisiz");
+  }
+
+  const db = getDb();
+  const [activeEmployees, yillikLeaves] = await Promise.all([
+    db.select().from(employees).where(eq(employees.active, true)),
+    db
+      .select({
+        employeeId: leaveRequests.employeeId,
+        status: leaveRequests.status,
+        startDate: leaveRequests.startDate,
+        endDate: leaveRequests.endDate,
+      })
+      .from(leaveRequests)
+      .where(eq(leaveRequests.type, "yillik")),
+  ]);
+
+  const usedByEmp = new Map<string, number>();
+  const pendingByEmp = new Map<string, number>();
+
+  for (const row of yillikLeaves) {
+    const days = countLeaveDays(row.startDate, row.endDate);
+    if (row.status === "onaylandi") {
+      usedByEmp.set(
+        row.employeeId,
+        (usedByEmp.get(row.employeeId) ?? 0) + days
+      );
+    } else if (row.status === "beklemede") {
+      pendingByEmp.set(
+        row.employeeId,
+        (pendingByEmp.get(row.employeeId) ?? 0) + days
+      );
+    }
+  }
+
+  const rows = activeEmployees
+    .map((emp) => {
+      const entitlement = getEntitlementDays(emp.hireDate);
+      const used = usedByEmp.get(emp.id) ?? 0;
+      const pending = pendingByEmp.get(emp.id) ?? 0;
+      return {
+        employeeId: emp.id,
+        name: `${emp.firstName} ${emp.lastName}`,
+        department: emp.department,
+        hireDate: emp.hireDate,
+        entitlement,
+        used,
+        remaining: Math.max(0, entitlement - used),
+        pending,
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, "tr"));
+
+  const totals = {
+    remaining: rows.reduce((s, r) => s + r.remaining, 0),
+    pending: rows.reduce((s, r) => s + r.pending, 0),
+    used: rows.reduce((s, r) => s + r.used, 0),
+  };
+
+  return { rows, totals };
 }

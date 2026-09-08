@@ -9,6 +9,7 @@ import { AppShell } from "@/components/app-shell";
 import {
   getAbsences,
   getLateArrivals,
+  getLeaveBalanceReport,
   getMonthlyReport,
   listAuditLogs,
 } from "@/lib/actions/reports";
@@ -18,6 +19,7 @@ import { LateArrivalDialog } from "@/components/mesai-actions";
 
 const tabs = [
   { id: "ozet", label: "Mesai özeti" },
+  { id: "izin", label: "İzin bakiyesi" },
   { id: "gec", label: "Geç giriş" },
   { id: "devamsizlik", label: "Devamsızlık" },
   { id: "audit", label: "Audit log" },
@@ -54,17 +56,19 @@ export default async function RaporlarPage({
   const fromKey = params.from || monthStart;
   const toKey = params.to || todayKey;
 
-  const [report, late, absences, audits, employees] = await Promise.all([
-    tab === "ozet" ? getMonthlyReport(year, month) : Promise.resolve(null),
-    tab === "gec" ? getLateArrivals(fromKey, toKey) : Promise.resolve(null),
-    tab === "devamsizlik"
-      ? getAbsences(fromKey, toKey)
-      : Promise.resolve(null),
-    tab === "audit"
-      ? listAuditLogs({ action: params.action || undefined })
-      : Promise.resolve(null),
-    tab === "gec" ? listEmployees() : Promise.resolve([]),
-  ]);
+  const [report, leaveBalances, late, absences, audits, employees] =
+    await Promise.all([
+      tab === "ozet" ? getMonthlyReport(year, month) : Promise.resolve(null),
+      tab === "izin" ? getLeaveBalanceReport() : Promise.resolve(null),
+      tab === "gec" ? getLateArrivals(fromKey, toKey) : Promise.resolve(null),
+      tab === "devamsizlik"
+        ? getAbsences(fromKey, toKey)
+        : Promise.resolve(null),
+      tab === "audit"
+        ? listAuditLogs({ action: params.action || undefined })
+        : Promise.resolve(null),
+      tab === "gec" ? listEmployees() : Promise.resolve([]),
+    ]);
 
   return (
     <AppShell role="admin" userName={session.user.name || session.user.email}>
@@ -72,7 +76,7 @@ export default async function RaporlarPage({
         <div>
           <h1 className="text-2xl font-semibold">Raporlar</h1>
           <p className="text-sm text-[var(--ink-muted)]">
-            Mesai, geç giriş, devamsızlık ve işlem geçmişi
+            Mesai, izin bakiyesi, geç giriş, devamsızlık ve işlem geçmişi
           </p>
         </div>
 
@@ -174,6 +178,140 @@ export default async function RaporlarPage({
                 </tbody>
               </table>
             </div>
+          </>
+        )}
+
+        {tab === "izin" && leaveBalances && (
+          <>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+              <div className="panel">
+                <p className="text-sm text-[var(--ink-muted)]">Toplam kalan</p>
+                <p className="mt-1 text-2xl font-semibold sm:text-3xl">
+                  {leaveBalances.totals.remaining}
+                </p>
+              </div>
+              <div className="panel">
+                <p className="text-sm text-[var(--ink-muted)]">Kullanılan</p>
+                <p className="mt-1 text-2xl font-semibold sm:text-3xl">
+                  {leaveBalances.totals.used}
+                </p>
+              </div>
+              <div className="panel col-span-2 sm:col-span-1">
+                <p className="text-sm text-[var(--ink-muted)]">Bekleyen</p>
+                <p className="mt-1 text-2xl font-semibold sm:text-3xl">
+                  {leaveBalances.totals.pending}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2 lg:hidden">
+              {leaveBalances.rows.length === 0 ? (
+                <p className="panel text-center text-sm text-[var(--ink-muted)]">
+                  Aktif personel yok
+                </p>
+              ) : (
+                leaveBalances.rows.map((r) => (
+                  <div key={r.employeeId} className="panel space-y-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-[var(--ink)]">
+                        {r.name}
+                      </p>
+                      <p className="truncate text-xs text-[var(--ink-muted)]">
+                        {r.department || "—"}
+                        {r.hireDate
+                          ? ` · İşe giriş ${format(parseISO(r.hireDate), "d MMM yyyy", { locale: tr })}`
+                          : ""}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-center">
+                      <div>
+                        <p className="text-[10px] text-[var(--ink-muted)]">
+                          Hak
+                        </p>
+                        <p className="font-semibold">{r.entitlement}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-[var(--ink-muted)]">
+                          Kullanılan
+                        </p>
+                        <p className="font-semibold">{r.used}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-[var(--ink-muted)]">
+                          Kalan
+                        </p>
+                        <p className="font-semibold text-[var(--brand)]">
+                          {r.remaining}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-[var(--ink-muted)]">
+                          Bekleyen
+                        </p>
+                        <p className="font-semibold">{r.pending}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="panel table-scroll hidden !p-0 lg:block">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-[var(--border)] bg-[var(--bg-muted)] text-[var(--ink-muted)]">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Personel</th>
+                    <th className="px-4 py-3 font-medium">Departman</th>
+                    <th className="px-4 py-3 font-medium">İşe giriş</th>
+                    <th className="px-4 py-3 font-medium">Hak</th>
+                    <th className="px-4 py-3 font-medium">Kullanılan</th>
+                    <th className="px-4 py-3 font-medium">Kalan</th>
+                    <th className="px-4 py-3 font-medium">Bekleyen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaveBalances.rows.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="px-4 py-8 text-center text-[var(--ink-muted)]"
+                      >
+                        Aktif personel yok
+                      </td>
+                    </tr>
+                  ) : (
+                    leaveBalances.rows.map((r) => (
+                      <tr
+                        key={r.employeeId}
+                        className="border-b border-[var(--border)] last:border-0"
+                      >
+                        <td className="px-4 py-3 font-medium">{r.name}</td>
+                        <td className="px-4 py-3 text-[var(--ink-muted)]">
+                          {r.department || "—"}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-[var(--ink-muted)]">
+                          {r.hireDate
+                            ? format(parseISO(r.hireDate), "d MMM yyyy", {
+                                locale: tr,
+                              })
+                            : "—"}
+                        </td>
+                        <td className="px-4 py-3">{r.entitlement}</td>
+                        <td className="px-4 py-3">{r.used}</td>
+                        <td className="px-4 py-3 font-medium text-[var(--brand)]">
+                          {r.remaining}
+                        </td>
+                        <td className="px-4 py-3">{r.pending}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <p className="text-xs text-[var(--ink-muted)]">
+              1 yıl → 14 gün, 5 yıl → 21 gün (takvim günü; yalnızca yıllık izin)
+            </p>
           </>
         )}
 
