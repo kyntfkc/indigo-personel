@@ -1,6 +1,6 @@
-# İndigo Personel Takip
+# indigo perso
 
-İndigo Takı personel takip sistemi — QR mesai, izin, raporlar.
+indigo perso personel takip sistemi — QR mesai, izin, raporlar.
 
 ## Stack
 

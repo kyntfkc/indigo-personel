@@ -424,7 +424,7 @@ export async function exportDataBackup() {
 
   return {
     exportedAt: new Date().toISOString(),
-    note: "Indigo Personel yedeği. Neon konsol yedeği ayrıca önerilir.",
+    note: "indigo perso yedeği. Neon konsol yedeği ayrıca önerilir.",
     employees: employeeRows,
     users: userRows,
     attendance: attendanceRows,

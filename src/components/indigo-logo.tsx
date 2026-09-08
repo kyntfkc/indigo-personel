@@ -17,20 +17,34 @@ export function IndigoLogo({
     lg: "h-12 sm:h-16",
   };
 
+  const textSizes = {
+    sm: "text-xl sm:text-2xl",
+    md: "text-2xl sm:text-3xl",
+    lg: "text-3xl sm:text-4xl",
+  };
+
   return (
     <Link
       href={href}
-      className={cn("inline-flex items-center", className)}
-      aria-label="Indigo"
+      className={cn("inline-flex items-center gap-1.5 sm:gap-2", className)}
+      aria-label="indigo perso"
     >
       <Image
         src="/indigo-logo.png"
-        alt="indigo"
+        alt=""
         width={566}
         height={246}
         className={cn("w-auto object-contain object-left", heights[size])}
         priority
       />
+      <span
+        className={cn(
+          "font-serif font-medium lowercase leading-none tracking-tight text-[var(--brand)]",
+          textSizes[size]
+        )}
+      >
+        perso
+      </span>
     </Link>
   );
 }

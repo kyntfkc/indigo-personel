@@ -1,16 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   createOvertime,
   deleteOvertime,
 } from "@/lib/actions/overtime";
-import {
-  isWeekend,
-  overtimeHoursForDay,
-} from "@/lib/istanbul-time";
+import { overtimeHoursForDay } from "@/lib/istanbul-time";
 import {
   Dialog,
   DialogContent,
@@ -40,17 +37,6 @@ export function CreateOvertimeDialog({
     String(overtimeHoursForDay(todayKey(), hourSettings))
   );
   const activeEmployees = employees.filter((e) => e.active !== false);
-
-  const preview = useMemo(() => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
-    const weekend = isWeekend(day);
-    const suggested = overtimeHoursForDay(day, hourSettings);
-    return {
-      weekend,
-      suggested,
-      label: weekend ? "Hafta sonu fazla mesai" : "Hafta içi fazla mesai",
-    };
-  }, [day, hourSettings]);
 
   useEffect(() => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
@@ -107,12 +93,6 @@ export function CreateOvertimeDialog({
               className="field"
             />
           </div>
-          {preview && (
-            <p className="rounded-2xl bg-[var(--bg-muted)] px-4 py-3 text-sm text-[var(--ink)]">
-              {preview.label} · varsayılan{" "}
-              <span className="font-semibold">+{preview.suggested} sa</span>
-            </p>
-          )}
           <div>
             <label className="mb-1 block text-sm">Saat</label>
             <input

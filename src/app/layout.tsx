@@ -4,11 +4,11 @@ import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "İndigo Personel Takip",
-  description: "İndigo Takı personel takip sistemi",
+  title: "indigo perso",
+  description: "indigo perso personel takip sistemi",
   appleWebApp: {
     capable: true,
-    title: "İndigo Personel",
+    title: "indigo perso",
     statusBarStyle: "default",
   },
 };
