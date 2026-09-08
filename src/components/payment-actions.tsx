@@ -53,7 +53,7 @@ export function CreatePaymentDialog({
       />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Prim / mesai ücreti ekle</DialogTitle>
+          <DialogTitle>Ödeme ekle</DialogTitle>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-3">
           <div>
@@ -72,6 +72,7 @@ export function CreatePaymentDialog({
             <select name="type" required className="field" defaultValue="prim">
               <option value="prim">Prim</option>
               <option value="mesai">Fazla mesai ücreti</option>
+              <option value="avans">Avans</option>
             </select>
           </div>
           <div>

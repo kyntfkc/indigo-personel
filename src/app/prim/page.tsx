@@ -7,6 +7,7 @@ import { listEmployees } from "@/lib/actions/employees";
 import { listPayments } from "@/lib/actions/payments";
 import {
   PAYMENT_LABELS,
+  isPaymentType,
   type PaymentType,
 } from "@/lib/payment-labels";
 import {
@@ -52,10 +53,7 @@ export default async function PrimPage({
   const defaults = monthRange(today);
   const from = params.from || defaults.from;
   const to = params.to || defaults.to;
-  const type =
-    params.type === "prim" || params.type === "mesai"
-      ? (params.type as PaymentType)
-      : undefined;
+  const type = params.type && isPaymentType(params.type) ? params.type : undefined;
 
   const [records, employees] = await Promise.all([
     listPayments({
@@ -74,15 +72,18 @@ export default async function PrimPage({
   const totalMesai = records
     .filter((r) => r.type === "mesai")
     .reduce((sum, r) => sum + Number(r.amount), 0);
+  const totalAvans = records
+    .filter((r) => r.type === "avans")
+    .reduce((sum, r) => sum + Number(r.amount), 0);
 
   return (
     <AppShell role="admin" userName={session.user.name || session.user.email}>
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold">Prim / Mesai</h1>
+            <h1 className="text-2xl font-semibold">Prim / Mesai / Avans</h1>
             <p className="text-sm text-[var(--ink-muted)]">
-              Ödenen prim ve fazla mesai ücretleri
+              Ödenen prim, fazla mesai ücreti ve avans
             </p>
           </div>
           <CreatePaymentDialog employees={employees} />
@@ -131,6 +132,7 @@ export default async function PrimPage({
               <option value="">Tümü</option>
               <option value="prim">Prim</option>
               <option value="mesai">Fazla mesai ücreti</option>
+              <option value="avans">Avans</option>
             </select>
           </div>
           <div className="flex items-end">
@@ -140,7 +142,7 @@ export default async function PrimPage({
           </div>
         </form>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="panel">
             <p className="text-xs text-[var(--ink-muted)]">Toplam</p>
             <p className="mt-1 text-xl font-semibold">{formatTry(total)}</p>
@@ -152,6 +154,10 @@ export default async function PrimPage({
           <div className="panel">
             <p className="text-xs text-[var(--ink-muted)]">Fazla mesai ücreti</p>
             <p className="mt-1 text-xl font-semibold">{formatTry(totalMesai)}</p>
+          </div>
+          <div className="panel">
+            <p className="text-xs text-[var(--ink-muted)]">Avans</p>
+            <p className="mt-1 text-xl font-semibold">{formatTry(totalAvans)}</p>
           </div>
         </div>
 

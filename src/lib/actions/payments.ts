@@ -8,6 +8,7 @@ import { employeePayments, employees } from "@/lib/db/schema";
 import { writeAudit } from "@/lib/audit";
 import {
   PAYMENT_LABELS,
+  isPaymentType,
   type PaymentType,
 } from "@/lib/payment-labels";
 
@@ -76,7 +77,7 @@ export async function createPayment(formData: FormData) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) {
     return { error: "Geçersiz tarih" };
   }
-  if (type !== "prim" && type !== "mesai") {
+  if (!isPaymentType(type)) {
     return { error: "Geçersiz tür" };
   }
 

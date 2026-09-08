@@ -30,7 +30,7 @@ export const leaveStatusEnum = pgEnum("leave_status", [
   "onaylandi",
   "reddedildi",
 ]);
-export const paymentTypeEnum = pgEnum("payment_type", ["prim", "mesai"]);
+export const paymentTypeEnum = pgEnum("payment_type", ["prim", "mesai", "avans"]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
