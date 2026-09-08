@@ -2,6 +2,7 @@ import { and, gte, isNull, lte } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { holidays } from "@/lib/db/schema";
 import { isWeekend } from "@/lib/istanbul-time";
+import { ensureTurkeyHolidays } from "@/lib/ensure-turkey-holidays";
 
 export { isWeekend };
 
@@ -36,6 +37,7 @@ export function workStartDateTime(dayKey: string, hhmm: string) {
 }
 
 export async function loadHolidaySet(fromKey: string, toKey: string) {
+  await ensureTurkeyHolidays();
   const db = getDb();
   const rows = await db
     .select()
@@ -51,6 +53,7 @@ export async function loadHolidaySet(fromKey: string, toKey: string) {
 }
 
 export async function listHolidaysInRange(fromKey: string, toKey: string) {
+  await ensureTurkeyHolidays();
   const db = getDb();
   return db
     .select()

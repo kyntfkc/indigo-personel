@@ -17,7 +17,7 @@ import {
   siteSettings,
   users,
 } from "@/lib/db/schema";
-import { getTurkeyHolidays } from "@/lib/turkey-holidays";
+import { ensureTurkeyHolidays } from "@/lib/ensure-turkey-holidays";
 
 const WORK_START_KEY = "work_start_time";
 const DEFAULT_WORK_START = "09:00";
@@ -216,6 +216,8 @@ export async function setOvertimeHourSettings(formData: FormData) {
 
 export async function listHolidays() {
   await requireAdmin();
+  const seeded = await ensureTurkeyHolidays();
+  if (seeded.inserted > 0) revalidateHolidayPaths();
   const db = getDb();
   return db
     .select()
@@ -329,56 +331,16 @@ export async function restoreHoliday(id: string) {
   return { success: true };
 }
 
-export async function seedTurkeyHolidays() {
-  const session = await requireAdmin();
-  const db = getDb();
-  const list = getTurkeyHolidays([2026, 2027]);
-  let inserted = 0;
-  let restored = 0;
-
-  for (const item of list) {
-    const [existing] = await db
-      .select()
-      .from(holidays)
-      .where(eq(holidays.date, item.date))
-      .limit(1);
-
-    if (!existing) {
-      await db.insert(holidays).values({
-        date: item.date,
-        name: item.name,
-        createdBy: session.user.id,
-      });
-      inserted += 1;
-      continue;
-    }
-
-    if (existing.deletedAt) {
-      await db
-        .update(holidays)
-        .set({
-          name: item.name,
-          deletedAt: null,
-          createdBy: session.user.id,
-        })
-        .where(eq(holidays.id, existing.id));
-      restored += 1;
-    }
-  }
-
-  await writeAudit({
-    action: "holiday.seed_turkey",
-    entityType: "holiday",
-    summary: `Türkiye resmi tatilleri yüklendi (${inserted} yeni, ${restored} geri alındı, 2026–2027)`,
-    meta: { inserted, restored, total: list.length },
-  });
-
+export async function ensureTurkeyHolidaysAction() {
+  await requireAdmin();
+  const result = await ensureTurkeyHolidays();
   revalidateHolidayPaths();
-  return {
-    success: true,
-    inserted: inserted + restored,
-    total: list.length,
-  };
+  return result;
+}
+
+/** @deprecated ensureTurkeyHolidaysAction kullanın */
+export async function seedTurkeyHolidays() {
+  return ensureTurkeyHolidaysAction();
 }
 
 export async function exportDataBackup() {

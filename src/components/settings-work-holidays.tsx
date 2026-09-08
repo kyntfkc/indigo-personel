@@ -21,7 +21,6 @@ import {
   exportDataBackup,
   removeHoliday,
   restoreHoliday,
-  seedTurkeyHolidays,
   setOvertimeHourSettings,
   setWorkStartTime,
 } from "@/lib/actions/settings";
@@ -227,28 +226,9 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
         <h2 className="font-semibold">Resmi tatiller</h2>
         <p className="mt-1 text-sm text-[var(--ink-muted)]">
           Bu günler iş günü sayılmaz; takvimde görsel olarak işaretlenir, izin
-          aralığına dahil edilebilir.
+          aralığına dahil edilebilir. Türkiye resmi tatilleri 2030’a kadar
+          otomatik eklenir.
         </p>
-        <button
-          type="button"
-          disabled={pending}
-          className="btn-outline mt-3 w-full !text-xs sm:w-auto"
-          onClick={() => {
-            startTransition(async () => {
-              const result = await seedTurkeyHolidays();
-              if ("error" in result && result.error) {
-                toast.error(String(result.error));
-                return;
-              }
-              toast.success(
-                `Türkiye tatilleri yüklendi (${result.inserted} yeni / ${result.total})`
-              );
-              router.refresh();
-            });
-          }}
-        >
-          Türkiye resmi tatillerini ekle (2026–2027)
-        </button>
       </div>
 
       <form
