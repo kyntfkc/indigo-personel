@@ -24,11 +24,11 @@ import { cn } from "@/lib/utils";
 const adminLinks = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/personel", label: "Personel", icon: Users },
-  { href: "/kiosk", label: "Kapı QR", icon: QrCode },
   { href: "/mesai", label: "Fazla Mesai", icon: Clock },
   { href: "/takvim", label: "Takvim", icon: CalendarRange },
   { href: "/izin", label: "İzin Onay", icon: CalendarDays },
   { href: "/raporlar", label: "Raporlar", icon: BarChart3 },
+  { href: "/kiosk", label: "Kapı QR", icon: QrCode },
   { href: "/ayarlar", label: "Ayarlar", icon: Settings },
 ];
 
