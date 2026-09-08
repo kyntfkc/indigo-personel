@@ -8,7 +8,7 @@ import { getTodayAttendanceSummary } from "@/lib/actions/attendance";
 import { getPendingLeaveCount } from "@/lib/actions/leave";
 import { getEmployeeCount, listEmployees } from "@/lib/actions/employees";
 import { getLateArrivals } from "@/lib/actions/reports";
-import { istanbulDateKey } from "@/lib/istanbul-time";
+import { formatLateMinutes, istanbulDateKey } from "@/lib/istanbul-time";
 import { Clock, Users, CalendarDays, UserCheck } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -132,7 +132,7 @@ export default async function DashboardPage() {
                       </p>
                     </div>
                     <span className="shrink-0 rounded-full bg-orange-50 px-2.5 py-0.5 text-xs font-medium text-orange-700">
-                      {row.lateMinutes} dk
+                      {formatLateMinutes(row.lateMinutes)}
                     </span>
                   </li>
                 ))}

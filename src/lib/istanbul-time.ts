@@ -45,3 +45,13 @@ export function overtimeHoursForDay(
 ) {
   return isWeekend(dayKey) ? settings.weekend : settings.weekday;
 }
+
+/** 75 → "1 sa 15 dk", 45 → "45 dk" */
+export function formatLateMinutes(totalMinutes: number) {
+  const mins = Math.max(0, Math.round(totalMinutes));
+  if (mins < 60) return `${mins} dk`;
+  const hours = Math.floor(mins / 60);
+  const rem = mins % 60;
+  if (rem === 0) return `${hours} sa`;
+  return `${hours} sa ${rem} dk`;
+}

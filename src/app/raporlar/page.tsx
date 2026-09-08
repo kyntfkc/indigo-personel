@@ -14,7 +14,7 @@ import {
   listAuditLogs,
 } from "@/lib/actions/reports";
 import { listEmployees } from "@/lib/actions/employees";
-import { istanbulDateKey } from "@/lib/istanbul-time";
+import { formatLateMinutes, istanbulDateKey } from "@/lib/istanbul-time";
 import { LateArrivalDialog } from "@/components/mesai-actions";
 
 const tabs = [
@@ -397,7 +397,7 @@ export default async function RaporlarPage({
                         {format(new Date(r.checkInAt), "HH:mm")}
                       </td>
                       <td className="px-4 py-3 text-orange-700">
-                        {r.lateMinutes} dk
+                        {formatLateMinutes(r.lateMinutes)}
                       </td>
                     </tr>
                   ))
