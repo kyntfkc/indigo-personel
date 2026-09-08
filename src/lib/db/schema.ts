@@ -5,7 +5,9 @@ import {
   timestamp,
   boolean,
   date,
+  integer,
   pgEnum,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -81,6 +83,26 @@ export const attendance = pgTable("attendance", {
     .defaultNow()
     .notNull(),
 });
+
+export const overtime = pgTable(
+  "overtime",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => employees.id, { onDelete: "cascade" }),
+    day: date("day").notNull(),
+    hours: integer("hours").notNull(),
+    note: text("note"),
+    createdBy: uuid("created_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [uniqueIndex("overtime_employee_day_uidx").on(t.employeeId, t.day)]
+);
 
 export const leaveRequests = pgTable("leave_requests", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -174,6 +196,7 @@ export const employeesRelations = relations(employees, ({ one, many }) => ({
     references: [users.id],
   }),
   attendance: many(attendance),
+  overtime: many(overtime),
   leaveRequests: many(leaveRequests),
 }));
 
@@ -181,6 +204,17 @@ export const attendanceRelations = relations(attendance, ({ one }) => ({
   employee: one(employees, {
     fields: [attendance.employeeId],
     references: [employees.id],
+  }),
+}));
+
+export const overtimeRelations = relations(overtime, ({ one }) => ({
+  employee: one(employees, {
+    fields: [overtime.employeeId],
+    references: [employees.id],
+  }),
+  creator: one(users, {
+    fields: [overtime.createdBy],
+    references: [users.id],
   }),
 }));
 
@@ -205,6 +239,7 @@ export const frozenDatesRelations = relations(frozenDates, ({ one }) => ({
 export type User = typeof users.$inferSelect;
 export type Employee = typeof employees.$inferSelect;
 export type Attendance = typeof attendance.$inferSelect;
+export type Overtime = typeof overtime.$inferSelect;
 export type LeaveRequest = typeof leaveRequests.$inferSelect;
 export type FrozenDate = typeof frozenDates.$inferSelect;
 export type DoorStation = typeof doorStations.$inferSelect;

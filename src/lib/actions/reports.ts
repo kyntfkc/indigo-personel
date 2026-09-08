@@ -8,6 +8,7 @@ import {
   auditLogs,
   employees,
   leaveRequests,
+  overtime,
   users,
 } from "@/lib/db/schema";
 import { getWorkStartTime } from "@/lib/actions/settings";
@@ -124,6 +125,15 @@ export async function getMonthlyReport(year: number, month: number) {
       )
     );
 
+  const monthStartKey = from.toISOString().slice(0, 10);
+  const monthEndKey = to.toISOString().slice(0, 10);
+  const overtimeRows = await db
+    .select()
+    .from(overtime)
+    .where(
+      and(gte(overtime.day, monthStartKey), lte(overtime.day, monthEndKey))
+    );
+
   const byEmployee = activeEmployees.map((emp) => {
     const empRecords = records.filter((r) => r.employeeId === emp.id);
     const { hours, daysPresent } = calcHoursFromRecords(empRecords);
@@ -142,6 +152,10 @@ export async function getMonthlyReport(year: number, month: number) {
       leaveDays += Math.max(0, days);
     }
 
+    const overtimeHours = overtimeRows
+      .filter((r) => r.employeeId === emp.id)
+      .reduce((s, r) => s + r.hours, 0);
+
     return {
       employeeId: emp.id,
       name: `${emp.firstName} ${emp.lastName}`,
@@ -149,6 +163,7 @@ export async function getMonthlyReport(year: number, month: number) {
       hours,
       daysPresent,
       leaveDays,
+      overtimeHours,
       recordCount: empRecords.length,
     };
   });
@@ -169,6 +184,7 @@ export async function getMonthlyReport(year: number, month: number) {
             ) / 10
           : 0,
       totalLeaveDays: byEmployee.reduce((s, e) => s + e.leaveDays, 0),
+      totalOvertimeHours: byEmployee.reduce((s, e) => s + e.overtimeHours, 0),
     },
   };
 }

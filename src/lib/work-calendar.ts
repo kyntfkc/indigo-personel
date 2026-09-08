@@ -1,17 +1,11 @@
 import { and, gte, isNull, lte } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { holidays } from "@/lib/db/schema";
+import { isWeekend } from "@/lib/istanbul-time";
+
+export { isWeekend };
 
 /** dayKey = yyyy-MM-dd */
-export function isWeekend(dayKey: string) {
-  const d = new Date(`${dayKey}T12:00:00+03:00`);
-  const weekday = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Europe/Istanbul",
-    weekday: "short",
-  }).format(d);
-  return weekday === "Sat" || weekday === "Sun";
-}
-
 export function eachDayKeys(fromKey: string, toKey: string): string[] {
   if (toKey < fromKey) return [];
   const keys: string[] = [];

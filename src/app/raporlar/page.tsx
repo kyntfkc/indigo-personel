@@ -128,7 +128,7 @@ export default async function RaporlarPage({
               </button>
             </form>
 
-            <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
               <div className="panel">
                 <p className="text-sm text-[var(--ink-muted)]">Toplam Mesai</p>
                 <p className="mt-1 text-2xl font-semibold sm:text-3xl">
@@ -139,6 +139,12 @@ export default async function RaporlarPage({
                 <p className="text-sm text-[var(--ink-muted)]">Ortalama</p>
                 <p className="mt-1 text-2xl font-semibold sm:text-3xl">
                   {report.totals.avgHours} sa
+                </p>
+              </div>
+              <div className="panel">
+                <p className="text-sm text-[var(--ink-muted)]">Fazla mesai</p>
+                <p className="mt-1 text-2xl font-semibold sm:text-3xl">
+                  {report.totals.totalOvertimeHours} sa
                 </p>
               </div>
               <div className="panel">
@@ -156,6 +162,7 @@ export default async function RaporlarPage({
                     <th className="px-4 py-3 font-medium">Personel</th>
                     <th className="px-4 py-3 font-medium">Departman</th>
                     <th className="px-4 py-3 font-medium">Mesai (sa)</th>
+                    <th className="px-4 py-3 font-medium">Fazla (sa)</th>
                     <th className="px-4 py-3 font-medium">Gün</th>
                     <th className="px-4 py-3 font-medium">İzin</th>
                   </tr>
@@ -171,6 +178,7 @@ export default async function RaporlarPage({
                         {e.department || "—"}
                       </td>
                       <td className="px-4 py-3">{e.hours}</td>
+                      <td className="px-4 py-3">{e.overtimeHours}</td>
                       <td className="px-4 py-3">{e.daysPresent}</td>
                       <td className="px-4 py-3">{e.leaveDays}</td>
                     </tr>

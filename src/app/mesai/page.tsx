@@ -3,14 +3,14 @@ export const dynamic = "force-dynamic";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
-import { listAttendance } from "@/lib/actions/attendance";
 import { listEmployees } from "@/lib/actions/employees";
+import { listOvertime } from "@/lib/actions/overtime";
 import {
-  ManualAttendanceDialog,
-  DeleteAttendanceButton,
-  EditAttendanceButton,
-} from "@/components/mesai-actions";
-import { format } from "date-fns";
+  CreateOvertimeDialog,
+  DeleteOvertimeButton,
+} from "@/components/overtime-actions";
+import { isWeekend } from "@/lib/istanbul-time";
+import { format, parseISO } from "date-fns";
 import { tr } from "date-fns/locale";
 
 export default async function MesaiPage({
@@ -27,7 +27,7 @@ export default async function MesaiPage({
   const to = params.to || today;
 
   const [records, employees] = await Promise.all([
-    listAttendance({
+    listOvertime({
       from,
       to,
       employeeId: params.employeeId,
@@ -40,17 +40,19 @@ export default async function MesaiPage({
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold">Mesai</h1>
+            <h1 className="text-2xl font-semibold">Fazla mesai</h1>
             <p className="text-sm text-[var(--ink-muted)]">
-              Giriş / çıkış kayıtları
+              Hafta içi +4 sa · Hafta sonu +8 sa
             </p>
           </div>
-          <ManualAttendanceDialog employees={employees} />
+          <CreateOvertimeDialog employees={employees} />
         </div>
 
         <form className="panel grid gap-3 sm:grid-cols-4">
           <div>
-            <label className="mb-1 block text-xs text-[var(--ink-muted)]">Başlangıç</label>
+            <label className="mb-1 block text-xs text-[var(--ink-muted)]">
+              Başlangıç
+            </label>
             <input
               type="date"
               name="from"
@@ -59,16 +61,15 @@ export default async function MesaiPage({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-[var(--ink-muted)]">Bitiş</label>
-            <input
-              type="date"
-              name="to"
-              defaultValue={to}
-              className="field"
-            />
+            <label className="mb-1 block text-xs text-[var(--ink-muted)]">
+              Bitiş
+            </label>
+            <input type="date" name="to" defaultValue={to} className="field" />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-[var(--ink-muted)]">Personel</label>
+            <label className="mb-1 block text-xs text-[var(--ink-muted)]">
+              Personel
+            </label>
             <select
               name="employeeId"
               defaultValue={params.employeeId || ""}
@@ -89,7 +90,6 @@ export default async function MesaiPage({
           </div>
         </form>
 
-        {/* Mobil: kart listesi. Tablo dar ekranda 5 kolonla okunmuyor. */}
         <div className="space-y-2 lg:hidden">
           {records.length === 0 ? (
             <p className="panel text-center text-sm text-[var(--ink-muted)]">
@@ -97,48 +97,32 @@ export default async function MesaiPage({
             </p>
           ) : (
             records.map((r) => (
-              <div key={r.id} className="panel flex items-start justify-between gap-3">
+              <div
+                key={r.id}
+                className="panel flex items-start justify-between gap-3"
+              >
                 <div className="min-w-0">
                   <p className="truncate font-medium text-[var(--ink)]">
                     {r.firstName} {r.lastName}
                   </p>
                   <p className="mt-0.5 text-sm text-[var(--ink-muted)]">
-                    {format(new Date(r.recordedAt), "d MMM yyyy HH:mm", {
-                      locale: tr,
-                    })}
+                    {format(parseISO(r.day), "d MMM yyyy", { locale: tr })}
                   </p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        r.type === "giris"
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-orange-50 text-orange-700"
-                      }`}
-                    >
-                      {r.type === "giris" ? "Giriş" : "Çıkış"}
+                    <span className="rounded-full bg-[var(--brand-soft)] px-2.5 py-0.5 text-xs font-medium text-[var(--brand)]">
+                      {isWeekend(r.day) ? "Hafta sonu" : "Hafta içi"}
                     </span>
-                    <span className="text-xs text-[var(--ink-muted)]">
-                      {r.method === "qr"
-                        ? "QR"
-                        : r.method === "otomatik"
-                          ? "Otomatik"
-                          : r.method === "yuz"
-                            ? "Yüz"
-                            : "Manuel"}
+                    <span className="text-xs font-medium text-[var(--ink)]">
+                      +{r.hours} sa
                     </span>
+                    {r.note ? (
+                      <span className="truncate text-xs text-[var(--ink-muted)]">
+                        {r.note}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <EditAttendanceButton
-                    record={{
-                      id: r.id,
-                      type: r.type,
-                      recordedAt: r.recordedAt,
-                      note: r.note,
-                    }}
-                  />
-                  <DeleteAttendanceButton id={r.id} />
-                </div>
+                <DeleteOvertimeButton id={r.id} />
               </div>
             ))
           )}
@@ -149,62 +133,44 @@ export default async function MesaiPage({
             <thead className="border-b border-[var(--border)] bg-[var(--bg-muted)] text-[var(--ink-muted)]">
               <tr>
                 <th className="px-4 py-3 font-medium">Personel</th>
-                <th className="px-4 py-3 font-medium">Tip</th>
-                <th className="px-4 py-3 font-medium">Zaman</th>
-                <th className="px-4 py-3 font-medium">Yöntem</th>
+                <th className="px-4 py-3 font-medium">Tarih</th>
+                <th className="px-4 py-3 font-medium">Tür</th>
+                <th className="px-4 py-3 font-medium">Saat</th>
+                <th className="px-4 py-3 font-medium">Not</th>
                 <th className="px-4 py-3 font-medium"></th>
               </tr>
             </thead>
             <tbody>
               {records.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-[var(--ink-muted)]">
+                  <td
+                    colSpan={6}
+                    className="px-4 py-8 text-center text-[var(--ink-muted)]"
+                  >
                     Kayıt bulunamadı
                   </td>
                 </tr>
               ) : (
                 records.map((r) => (
-                  <tr key={r.id} className="border-b border-[var(--border)] last:border-0">
-                    <td className="px-4 py-3">
+                  <tr
+                    key={r.id}
+                    className="border-b border-[var(--border)] last:border-0"
+                  >
+                    <td className="px-4 py-3 font-medium">
                       {r.firstName} {r.lastName}
                     </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          r.type === "giris"
-                            ? "bg-emerald-50 text-emerald-700"
-                            : "bg-orange-50 text-orange-700"
-                        }`}
-                      >
-                        {r.type === "giris" ? "Giriş" : "Çıkış"}
-                      </span>
-                    </td>
                     <td className="px-4 py-3 whitespace-nowrap text-[var(--ink-muted)]">
-                      {format(new Date(r.recordedAt), "d MMM yyyy HH:mm", {
-                        locale: tr,
-                      })}
+                      {format(parseISO(r.day), "d MMM yyyy", { locale: tr })}
                     </td>
-                    <td className="px-4 py-3 text-[var(--ink-muted)]">
-                      {r.method === "qr"
-                        ? "QR"
-                        : r.method === "otomatik"
-                          ? "Otomatik"
-                          : r.method === "yuz"
-                            ? "Yüz"
-                            : "Manuel"}
+                    <td className="px-4 py-3">
+                      {isWeekend(r.day) ? "Hafta sonu" : "Hafta içi"}
+                    </td>
+                    <td className="px-4 py-3 font-medium">+{r.hours} sa</td>
+                    <td className="max-w-48 truncate px-4 py-3 text-[var(--ink-muted)]">
+                      {r.note || "—"}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <div className="inline-flex items-center justify-end gap-1">
-                        <EditAttendanceButton
-                          record={{
-                            id: r.id,
-                            type: r.type,
-                            recordedAt: r.recordedAt,
-                            note: r.note,
-                          }}
-                        />
-                        <DeleteAttendanceButton id={r.id} />
-                      </div>
+                      <DeleteOvertimeButton id={r.id} />
                     </td>
                   </tr>
                 ))

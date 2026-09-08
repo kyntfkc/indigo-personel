@@ -13,7 +13,7 @@ import { Clock, Users, CalendarDays, UserCheck } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import Link from "next/link";
-import { LateArrivalDialog } from "@/components/mesai-actions";
+import { LateArrivalDialog, ManualAttendanceDialog } from "@/components/mesai-actions";
 
 export default async function DashboardPage() {
   try {
@@ -47,7 +47,7 @@ export default async function DashboardPage() {
       label: "Bugün Giriş",
       value: summary.checkedInCount,
       icon: UserCheck,
-      href: "/mesai",
+      href: "/raporlar",
     },
     {
       label: "Geç Kalan",
@@ -141,14 +141,9 @@ export default async function DashboardPage() {
           </section>
 
           <section className="panel">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between gap-2">
               <h2 className="font-semibold text-[var(--ink)]">Bugünkü Kayıtlar</h2>
-              <Link
-                href="/mesai"
-                className="tap shrink-0 text-xs font-medium text-[var(--brand)] hover:underline"
-              >
-                Tümünü gör
-              </Link>
+              <ManualAttendanceDialog employees={employees} />
             </div>
             {summary.records.length === 0 ? (
               <p className="text-sm text-[var(--ink-muted)]">Henüz kayıt yok.</p>

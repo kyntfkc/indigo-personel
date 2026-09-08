@@ -25,3 +25,17 @@ export function previousIstanbulDateKey(date = new Date()) {
 export function istanbulEighteenHundred(dayKey: string) {
   return new Date(`${dayKey}T18:00:00+03:00`);
 }
+
+/** dayKey = yyyy-MM-dd */
+export function isWeekend(dayKey: string) {
+  const d = new Date(`${dayKey}T12:00:00+03:00`);
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Europe/Istanbul",
+    weekday: "short",
+  }).format(d);
+  return weekday === "Sat" || weekday === "Sun";
+}
+
+export function overtimeHoursForDay(dayKey: string) {
+  return isWeekend(dayKey) ? 8 : 4;
+}
