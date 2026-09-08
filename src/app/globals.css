@@ -105,13 +105,51 @@
 }
 
 .btn-primary {
-  @apply inline-flex items-center justify-center rounded-full bg-[var(--brand)] px-6 py-2.5 text-sm font-medium text-white transition hover:opacity-90 active:scale-[0.99] disabled:opacity-50;
+  @apply inline-flex min-h-11 items-center justify-center rounded-full bg-[var(--brand)] px-6 py-2.5 text-sm font-medium text-white transition hover:opacity-90 active:scale-[0.99] disabled:opacity-50 sm:min-h-10;
 }
 
 .btn-outline {
-  @apply inline-flex items-center justify-center gap-1.5 rounded-full border border-[var(--brand)] bg-white px-4 py-2 text-sm font-medium text-[var(--brand)] transition hover:bg-[var(--brand-soft)] active:scale-[0.99] disabled:opacity-50;
+  @apply inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-[var(--brand)] bg-white px-4 py-2 text-sm font-medium text-[var(--brand)] transition hover:bg-[var(--brand-soft)] active:scale-[0.99] disabled:opacity-50 sm:min-h-9;
+}
+
+/* Dokunmatikte en az 44px hedef; masaüstünde satır içi kalır. */
+.tap {
+  @apply inline-flex min-h-11 items-center justify-center gap-1 sm:min-h-0;
+}
+
+/* iOS Safari 16px altındaki alanlara odaklanınca sayfayı zoom'lar. */
+.field {
+  @apply w-full rounded-full border border-[var(--border)] bg-white px-4 py-2.5 text-base outline-none focus:border-[var(--brand)] sm:py-2 sm:text-sm;
+}
+
+.field-area {
+  @apply w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-2.5 text-base outline-none focus:border-[var(--brand)] sm:py-2 sm:text-sm;
 }
 
 .panel {
   @apply w-full rounded-2xl border border-[var(--border)] bg-white p-4 sm:p-5;
+}
+
+/* Kaydırılabilir tabloların sağ kenarında ipucu gölgesi. */
+.table-scroll {
+  @apply overflow-x-auto;
+  scrollbar-width: thin;
+  background:
+    linear-gradient(to right, white 30%, rgba(255, 255, 255, 0)) left center /
+      24px 100% no-repeat,
+    linear-gradient(to left, white 30%, rgba(255, 255, 255, 0)) right center /
+      24px 100% no-repeat,
+    radial-gradient(
+        farthest-side at 0 50%,
+        rgba(30, 30, 32, 0.12),
+        rgba(0, 0, 0, 0)
+      )
+      left center / 12px 100% no-repeat,
+    radial-gradient(
+        farthest-side at 100% 50%,
+        rgba(30, 30, 32, 0.12),
+        rgba(0, 0, 0, 0)
+      )
+      right center / 12px 100% no-repeat;
+  background-attachment: local, local, scroll, scroll;
 }

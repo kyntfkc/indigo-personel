@@ -42,7 +42,7 @@ export default async function PersonelDetailPage({
       <div className="space-y-6">
         <Link
           href="/personel"
-          className="text-sm text-[var(--brand)] hover:underline"
+          className="tap -ml-1 text-sm text-[var(--brand)] hover:underline"
         >
           ← Personel listesi
         </Link>
@@ -60,7 +60,7 @@ export default async function PersonelDetailPage({
               <h2 className="font-semibold">İzin geçmişi</h2>
               <Link
                 href="/takvim"
-                className="text-xs text-[var(--brand)] hover:underline"
+                className="tap shrink-0 text-xs text-[var(--brand)] hover:underline"
               >
                 Takvimde gör
               </Link>

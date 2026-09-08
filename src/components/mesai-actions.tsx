@@ -20,8 +20,7 @@ export function ManualAttendanceDialog({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const field =
-    "w-full rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm outline-none focus:border-[var(--brand)]";
+  const field = "field";
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -101,7 +100,7 @@ export function DeleteAttendanceButton({ id }: { id: string }) {
     <>
       <button
         type="button"
-        className="text-xs text-red-600 hover:underline"
+        className="tap shrink-0 rounded-full px-3 text-xs font-medium text-red-600 transition hover:bg-red-50 active:bg-red-100 sm:px-2 sm:py-1"
         onClick={() => setOpen(true)}
       >
         Sil
@@ -114,7 +113,7 @@ export function DeleteAttendanceButton({ id }: { id: string }) {
           <p className="text-sm text-[var(--ink-muted)]">
             Bu işlem geri alınamaz.
           </p>
-          <div className="mt-2 flex justify-end gap-2">
+          <div className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
               type="button"
               className="btn-outline"

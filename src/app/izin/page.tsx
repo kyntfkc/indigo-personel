@@ -41,7 +41,7 @@ export default async function IzinPage({
             <Link
               key={t.value || "all"}
               href={t.value ? `/izin?status=${t.value}` : "/izin"}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium ${
+              className={`tap rounded-full px-4 text-sm font-medium sm:py-1.5 ${
                 (status || "") === t.value
                   ? "bg-[var(--brand)] text-white"
                   : "bg-white text-[var(--ink-muted)] border border-[var(--border)]"
@@ -52,7 +52,46 @@ export default async function IzinPage({
           ))}
         </div>
 
-        <div className="panel overflow-x-auto !p-0">
+        {/* Mobil: kart listesi. İşlem butonları tabloda sığmıyor. */}
+        <div className="space-y-2 lg:hidden">
+          {rows.length === 0 ? (
+            <p className="panel text-center text-sm text-[var(--ink-muted)]">
+              Talep yok
+            </p>
+          ) : (
+            rows.map((r) => (
+              <div key={r.id} className="panel space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 truncate font-medium text-[var(--ink)]">
+                    {r.firstName} {r.lastName}
+                  </p>
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      r.status === "beklemede"
+                        ? "bg-amber-50 text-amber-700"
+                        : r.status === "onaylandi"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-red-50 text-red-700"
+                    }`}
+                  >
+                    {leaveStatusLabels[r.status]}
+                  </span>
+                </div>
+                <p className="text-sm text-[var(--ink-muted)]">
+                  {leaveTypeLabels[r.type]} ·{" "}
+                  {format(new Date(r.startDate), "d MMM", { locale: tr })} —{" "}
+                  {format(new Date(r.endDate), "d MMM yyyy", { locale: tr })}
+                </p>
+                {r.note && (
+                  <p className="text-sm text-[var(--ink-muted)]">{r.note}</p>
+                )}
+                {r.status === "beklemede" && <LeaveReviewButtons id={r.id} />}
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="panel table-scroll hidden !p-0 lg:block">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-[var(--border)] bg-[var(--bg-muted)] text-[var(--ink-muted)]">
               <tr>
@@ -82,7 +121,7 @@ export default async function IzinPage({
                       )}
                     </td>
                     <td className="px-4 py-3">{leaveTypeLabels[r.type]}</td>
-                    <td className="px-4 py-3 text-[var(--ink-muted)]">
+                    <td className="px-4 py-3 whitespace-nowrap text-[var(--ink-muted)]">
                       {format(new Date(r.startDate), "d MMM", { locale: tr })} —{" "}
                       {format(new Date(r.endDate), "d MMM yyyy", { locale: tr })}
                     </td>

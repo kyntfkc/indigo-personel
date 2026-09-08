@@ -12,9 +12,9 @@ export function IndigoLogo({
   size?: "sm" | "md" | "lg";
 }) {
   const heights = {
-    sm: "h-9",
-    md: "h-11",
-    lg: "h-16",
+    sm: "h-8 sm:h-9",
+    md: "h-9 sm:h-11",
+    lg: "h-12 sm:h-16",
   };
 
   return (

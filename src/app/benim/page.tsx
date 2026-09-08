@@ -111,7 +111,7 @@ export default async function BenimPage() {
           </section>
 
           <section className="panel">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-semibold">Son izinler</h2>
               <Link href="/takvim" className="btn-primary !py-1.5 !text-xs">
                 Takvimden talep et
@@ -126,19 +126,19 @@ export default async function BenimPage() {
           {records.length === 0 ? (
             <p className="text-sm text-[var(--ink-muted)]">Henüz kayıt yok</p>
           ) : (
-            <ul className="max-h-80 space-y-2 overflow-y-auto">
+            <ul className="max-h-80 space-y-2 overflow-y-auto overscroll-contain">
               {records.map((r) => (
                 <li
                   key={r.id}
-                  className="flex items-center justify-between rounded-xl bg-[var(--bg-muted)] px-3 py-2 text-sm"
+                  className="flex items-center justify-between gap-3 rounded-xl bg-[var(--bg-muted)] px-3 py-2 text-sm"
                 >
-                  <span>
+                  <span className="min-w-0">
                     {format(new Date(r.recordedAt), "d MMM yyyy HH:mm", {
                       locale: tr,
                     })}
                   </span>
                   <span
-                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
                       r.type === "giris"
                         ? "bg-emerald-50 text-emerald-700"
                         : "bg-orange-50 text-orange-700"

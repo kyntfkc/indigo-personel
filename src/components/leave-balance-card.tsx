@@ -18,7 +18,7 @@ export function LeaveBalanceCard({
   return (
     <div className="panel space-y-4">
       <div className="flex items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <h2 className="font-semibold">İzin bakiyesi</h2>
           {hireDate && (
             <p className="text-xs text-[var(--ink-muted)]">
@@ -27,7 +27,7 @@ export function LeaveBalanceCard({
             </p>
           )}
         </div>
-        <Link href="/takvim" className="btn-outline !py-1.5 !text-xs">
+        <Link href="/takvim" className="btn-outline shrink-0 !py-1.5 !text-xs">
           Takvim
         </Link>
       </div>
@@ -83,7 +83,7 @@ export function LeaveHistoryList({
           key={l.id}
           className="flex items-start justify-between gap-2 rounded-xl border border-[var(--border)] px-3 py-2 text-sm"
         >
-          <div>
+          <div className="min-w-0">
             <p className="font-medium">{leaveTypeLabels[l.type] || l.type}</p>
             <p className="text-[var(--ink-muted)]">
               {format(parseISO(l.startDate), "d MMM", { locale: tr })} —{" "}
@@ -91,7 +91,7 @@ export function LeaveHistoryList({
             </p>
           </div>
           <span
-            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+            className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
               l.status === "beklemede"
                 ? "bg-amber-50 text-amber-700"
                 : l.status === "onaylandi"

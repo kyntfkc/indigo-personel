@@ -54,7 +54,7 @@ export default async function MesaiPage({
               type="date"
               name="from"
               defaultValue={from}
-              className="w-full rounded-full border border-[var(--border)] px-3 py-2 text-sm"
+              className="field"
             />
           </div>
           <div>
@@ -63,7 +63,7 @@ export default async function MesaiPage({
               type="date"
               name="to"
               defaultValue={to}
-              className="w-full rounded-full border border-[var(--border)] px-3 py-2 text-sm"
+              className="field"
             />
           </div>
           <div>
@@ -71,7 +71,7 @@ export default async function MesaiPage({
             <select
               name="employeeId"
               defaultValue={params.employeeId || ""}
-              className="w-full rounded-full border border-[var(--border)] px-3 py-2 text-sm"
+              className="field"
             >
               <option value="">Tümü</option>
               {employees.map((e) => (
@@ -88,7 +88,52 @@ export default async function MesaiPage({
           </div>
         </form>
 
-        <div className="panel overflow-x-auto !p-0">
+        {/* Mobil: kart listesi. Tablo dar ekranda 5 kolonla okunmuyor. */}
+        <div className="space-y-2 lg:hidden">
+          {records.length === 0 ? (
+            <p className="panel text-center text-sm text-[var(--ink-muted)]">
+              Kayıt bulunamadı
+            </p>
+          ) : (
+            records.map((r) => (
+              <div key={r.id} className="panel flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-[var(--ink)]">
+                    {r.firstName} {r.lastName}
+                  </p>
+                  <p className="mt-0.5 text-sm text-[var(--ink-muted)]">
+                    {format(new Date(r.recordedAt), "d MMM yyyy HH:mm", {
+                      locale: tr,
+                    })}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        r.type === "giris"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-orange-50 text-orange-700"
+                      }`}
+                    >
+                      {r.type === "giris" ? "Giriş" : "Çıkış"}
+                    </span>
+                    <span className="text-xs text-[var(--ink-muted)]">
+                      {r.method === "qr"
+                        ? "QR"
+                        : r.method === "otomatik"
+                          ? "Otomatik"
+                          : r.method === "yuz"
+                            ? "Yüz"
+                            : "Manuel"}
+                    </span>
+                  </div>
+                </div>
+                <DeleteAttendanceButton id={r.id} />
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="panel table-scroll hidden !p-0 lg:block">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-[var(--border)] bg-[var(--bg-muted)] text-[var(--ink-muted)]">
               <tr>
@@ -123,7 +168,7 @@ export default async function MesaiPage({
                         {r.type === "giris" ? "Giriş" : "Çıkış"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-[var(--ink-muted)]">
+                    <td className="px-4 py-3 whitespace-nowrap text-[var(--ink-muted)]">
                       {format(new Date(r.recordedAt), "d MMM yyyy HH:mm", {
                         locale: tr,
                       })}

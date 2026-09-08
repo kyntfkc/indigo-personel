@@ -47,8 +47,7 @@ export async function listEmployees(search?: string) {
       e.firstName.toLowerCase().includes(q) ||
       e.lastName.toLowerCase().includes(q) ||
       (e.email?.toLowerCase().includes(q) ?? false) ||
-      (e.department?.toLowerCase().includes(q) ?? false) ||
-      (e.position?.toLowerCase().includes(q) ?? false)
+      (e.department?.toLowerCase().includes(q) ?? false)
   );
 }
 
@@ -72,8 +71,11 @@ export async function createEmployee(formData: FormData) {
   const email = String(formData.get("email") || "").trim() || null;
   const phone = String(formData.get("phone") || "").trim() || null;
   const department = String(formData.get("department") || "").trim() || null;
-  const position = String(formData.get("position") || "").trim() || null;
   const hireDate = String(formData.get("hireDate") || "").trim() || null;
+  const tcKimlik = String(formData.get("tcKimlik") || "").trim() || null;
+  const bloodType = String(formData.get("bloodType") || "").trim() || null;
+  const birthDate = String(formData.get("birthDate") || "").trim() || null;
+  const address = String(formData.get("address") || "").trim() || null;
   const emergencyContact =
     String(formData.get("emergencyContact") || "").trim() || null;
   const notes = String(formData.get("notes") || "").trim() || null;
@@ -134,8 +136,11 @@ export async function createEmployee(formData: FormData) {
       email,
       phone,
       department,
-      position,
       hireDate,
+      tcKimlik,
+      bloodType,
+      birthDate,
+      address,
       emergencyContact,
       notes,
       qrToken: generateQrToken(),
@@ -166,8 +171,11 @@ export async function updateEmployee(id: string, formData: FormData) {
     const email = String(formData.get("email") || "").trim() || null;
     const phone = String(formData.get("phone") || "").trim() || null;
     const department = String(formData.get("department") || "").trim() || null;
-    const position = String(formData.get("position") || "").trim() || null;
     const hireDate = String(formData.get("hireDate") || "").trim() || null;
+    const tcKimlik = String(formData.get("tcKimlik") || "").trim() || null;
+    const bloodType = String(formData.get("bloodType") || "").trim() || null;
+    const birthDate = String(formData.get("birthDate") || "").trim() || null;
+    const address = String(formData.get("address") || "").trim() || null;
     const emergencyContact =
       String(formData.get("emergencyContact") || "").trim() || null;
     const notes = String(formData.get("notes") || "").trim() || null;
@@ -185,8 +193,11 @@ export async function updateEmployee(id: string, formData: FormData) {
         email,
         phone,
         department,
-        position,
         hireDate,
+        tcKimlik,
+        bloodType,
+        birthDate,
+        address,
         emergencyContact,
         notes,
         active,
@@ -197,12 +208,14 @@ export async function updateEmployee(id: string, formData: FormData) {
     const phone = String(formData.get("phone") || "").trim() || null;
     const emergencyContact =
       String(formData.get("emergencyContact") || "").trim() || null;
+    const address = String(formData.get("address") || "").trim() || null;
 
     await db
       .update(employees)
       .set({
         phone,
         emergencyContact,
+        address,
         updatedAt: new Date(),
       })
       .where(eq(employees.id, id));

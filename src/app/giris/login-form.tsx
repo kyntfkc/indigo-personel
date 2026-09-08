@@ -37,8 +37,8 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-[var(--bg-muted)] px-4">
-      <div className="panel w-full max-w-md !p-8">
+    <div className="flex min-h-dvh items-center justify-center bg-[var(--bg-muted)] px-4 py-8">
+      <div className="panel w-full max-w-md !p-6 sm:!p-8">
         <div className="mb-8 flex flex-col items-center gap-2 text-center">
           <IndigoLogo size="lg" />
           <p className="text-sm text-[var(--ink-muted)]">
@@ -56,9 +56,11 @@ export default function LoginForm() {
               type="text"
               required
               autoComplete="username"
-              placeholder="Personel: kullanıcı adı · Admin: e-posta"
-              className="w-full rounded-full border border-[var(--border)] bg-white px-4 py-2.5 text-sm outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-soft)]"
+              className="field focus:ring-2 focus:ring-[var(--brand-soft)]"
             />
+            <p className="mt-1.5 text-xs text-[var(--ink-muted)]">
+              Personel kullanıcı adı, admin e-posta ile girer.
+            </p>
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-[var(--ink)]">
@@ -69,7 +71,7 @@ export default function LoginForm() {
               type="password"
               required
               autoComplete="current-password"
-              className="w-full rounded-full border border-[var(--border)] bg-white px-4 py-2.5 text-sm outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-soft)]"
+              className="field focus:ring-2 focus:ring-[var(--brand-soft)]"
             />
           </div>
           {error && (

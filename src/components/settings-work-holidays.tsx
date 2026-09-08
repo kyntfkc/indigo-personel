@@ -32,8 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import type { Holiday } from "@/lib/db/schema";
 
-const field =
-  "w-full rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm outline-none focus:border-[var(--brand)]";
+const field = "field";
 
 export function WorkStartForm({ workStart }: { workStart: string }) {
   const router = useRouter();
@@ -70,7 +69,11 @@ export function WorkStartForm({ workStart }: { workStart: string }) {
           className={field}
         />
       </div>
-      <button type="submit" disabled={pending} className="btn-primary">
+      <button
+        type="submit"
+        disabled={pending}
+        className="btn-primary w-full sm:w-auto"
+      >
         {pending ? "Kaydediliyor..." : "Kaydet"}
       </button>
     </form>
@@ -97,6 +100,14 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
     const end = endOfWeek(endOfMonth(month), { weekStartsOn: 1 });
     return eachDayOfInterval({ start, end });
   }, [month]);
+
+  const monthHolidays = useMemo(() => {
+    const from = format(startOfMonth(month), "yyyy-MM-dd");
+    const to = format(endOfMonth(month), "yyyy-MM-dd");
+    return holidays
+      .filter((h) => h.date >= from && h.date <= to)
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [holidays, month]);
 
   function onDayClick(day: Date) {
     const key = format(day, "yyyy-MM-dd");
@@ -150,7 +161,7 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
         <button
           type="button"
           disabled={pending}
-          className="btn-outline mt-3 !text-xs"
+          className="btn-outline mt-3 w-full !text-xs sm:w-auto"
           onClick={() => {
             startTransition(async () => {
               const result = await seedTurkeyHolidays();
@@ -170,7 +181,7 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
       </div>
 
       <form
-        className="flex flex-wrap items-end gap-3"
+        className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] sm:items-end"
         onSubmit={(e) => {
           e.preventDefault();
           const fd = new FormData();
@@ -201,7 +212,7 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
             className={field}
           />
         </div>
-        <div className="min-w-[180px] flex-1">
+        <div>
           <label className="mb-1 block text-xs text-[var(--ink-muted)]">
             Ad
           </label>
@@ -214,7 +225,11 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
             className={field}
           />
         </div>
-        <button type="submit" disabled={pending} className="btn-primary">
+        <button
+          type="submit"
+          disabled={pending}
+          className="btn-primary w-full sm:w-auto"
+        >
           Ekle
         </button>
       </form>
@@ -227,7 +242,7 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
         >
           <ChevronLeft className="size-4" />
         </button>
-        <h3 className="text-base font-semibold capitalize">
+        <h3 className="truncate text-base font-semibold capitalize">
           {format(month, "MMMM yyyy", { locale: tr })}
         </h3>
         <button
@@ -240,11 +255,11 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
       </div>
 
       <p className="text-xs text-[var(--ink-muted)]">
-        Boş güne tıklayın → tarih dolar. Tatil gününe tıklayın → silme onayı
-        çıkar.
+        Boş güne dokunun, tarih alanı dolar. Tatil gününe dokunduğunuzda silme
+        onayı çıkar.
       </p>
 
-      <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-[var(--ink-muted)]">
+      <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-[var(--ink-muted)] sm:text-xs">
         {["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"].map((d) => (
           <div key={d} className="py-2">
             {d}
@@ -252,7 +267,55 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      {/* Mobil: tatil adı hücreye sığmadığı için nokta ile işaretlenir, liste altta. */}
+      <div className="grid grid-cols-7 gap-1 lg:hidden">
+        {days.map((day) => {
+          const key = format(day, "yyyy-MM-dd");
+          const holiday = holidayByDate.get(key);
+          const inMonth = isSameMonth(day, month);
+          const selected = date === key;
+
+          return (
+            <button
+              key={key}
+              type="button"
+              disabled={pending}
+              aria-label={
+                holiday
+                  ? `${format(day, "d MMMM", { locale: tr })} — ${holiday.name}, kaldırmak için dokunun`
+                  : `${format(day, "d MMMM", { locale: tr })} — tarihi seçmek için dokunun`
+              }
+              onClick={() => onDayClick(day)}
+              className={`flex aspect-square min-h-11 flex-col items-center justify-center rounded-xl border transition ${
+                holiday
+                  ? "border-[var(--brand)]/40 bg-[var(--brand-soft)]"
+                  : selected
+                    ? "border-[var(--brand)] bg-[var(--brand)] text-white"
+                    : "border-[var(--border)] bg-white active:bg-[var(--brand-soft)]"
+              } ${!inMonth ? "opacity-40" : ""}`}
+            >
+              <span
+                className={`text-sm font-semibold ${
+                  selected
+                    ? "text-white"
+                    : isSameDay(day, new Date())
+                      ? "text-[var(--brand)]"
+                      : "text-[var(--ink)]"
+                }`}
+              >
+                {format(day, "d")}
+              </span>
+              <span className="mt-0.5 flex h-2 items-center">
+                {holiday && (
+                  <span className="size-1.5 rounded-full bg-[var(--brand)]" />
+                )}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="hidden grid-cols-7 gap-1 lg:grid">
         {days.map((day) => {
           const key = format(day, "yyyy-MM-dd");
           const holiday = holidayByDate.get(key);
@@ -303,6 +366,46 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
         </span>
       </div>
 
+      {/* Mobilde tatil adları yalnızca burada okunabilir. */}
+      <div className="border-t border-[var(--border)] pt-4 lg:hidden">
+        <h3 className="mb-2 text-sm font-semibold capitalize">
+          {format(month, "MMMM", { locale: tr })} tatilleri
+        </h3>
+        {monthHolidays.length === 0 ? (
+          <p className="text-sm text-[var(--ink-muted)]">
+            Bu ay resmi tatil yok.
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {monthHolidays.map((h) => (
+              <li
+                key={h.id}
+                className="flex items-center justify-between gap-3 rounded-xl bg-[var(--brand-soft)] px-3 py-2 text-sm"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-[var(--ink)]">
+                    {h.name}
+                  </p>
+                  <p className="text-xs text-[var(--ink-muted)]">
+                    {format(new Date(h.date + "T12:00:00"), "d MMMM EEEE", {
+                      locale: tr,
+                    })}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={pending}
+                  className="tap shrink-0 rounded-full px-3 text-xs font-medium text-red-600 transition active:bg-red-100"
+                  onClick={() => setPendingDelete(h)}
+                >
+                  Kaldır
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       <Dialog
         open={!!pendingDelete}
         onOpenChange={(open) => {
@@ -321,7 +424,7 @@ export function HolidaysPanel({ holidays }: { holidays: Holiday[] }) {
               — {pendingDelete.name}
             </p>
           )}
-          <div className="mt-2 flex justify-end gap-2">
+          <div className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
               type="button"
               className="btn-outline"
@@ -358,7 +461,7 @@ export function BackupExportPanel() {
       <button
         type="button"
         disabled={pending}
-        className="btn-primary"
+        className="btn-primary w-full sm:w-auto"
         onClick={() => {
           startTransition(async () => {
             try {

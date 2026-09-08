@@ -8,8 +8,7 @@ import { useState } from "react";
 export function LeaveRequestForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const field =
-    "w-full rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm outline-none focus:border-[var(--brand)]";
+  const field = "field";
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -50,7 +49,11 @@ export function LeaveRequestForm() {
         <label className="mb-1 block text-sm">Not</label>
         <input name="note" className={field} />
       </div>
-      <button type="submit" disabled={loading} className="btn-primary">
+      <button
+        type="submit"
+        disabled={loading}
+        className="btn-primary w-full sm:w-auto"
+      >
         {loading ? "Gönderiliyor..." : "Talep Gönder"}
       </button>
     </form>

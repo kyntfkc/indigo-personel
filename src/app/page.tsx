@@ -66,15 +66,23 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           {cards.map(({ label, value, icon: Icon, href }) => (
-            <Link key={label} href={href} className="panel transition hover:border-[var(--brand)]">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-[var(--ink-muted)]">{label}</p>
-                  <p className="mt-1 text-3xl font-semibold text-[var(--ink)]">{value}</p>
+            <Link
+              key={label}
+              href={href}
+              className="panel transition hover:border-[var(--brand)] active:bg-[var(--brand-soft)]"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs text-[var(--ink-muted)] sm:text-sm">
+                    {label}
+                  </p>
+                  <p className="mt-1 text-2xl font-semibold text-[var(--ink)] sm:text-3xl">
+                    {value}
+                  </p>
                 </div>
-                <div className="rounded-full bg-[var(--brand-soft)] p-2.5 text-[var(--brand)]">
+                <div className="shrink-0 rounded-full bg-[var(--brand-soft)] p-2 text-[var(--brand)] sm:p-2.5">
                   <Icon className="h-5 w-5" />
                 </div>
               </div>
@@ -97,17 +105,17 @@ export default async function DashboardPage() {
                 {summary.open.map((row) => (
                   <li
                     key={row.employeeId}
-                    className="flex items-center justify-between rounded-xl bg-[var(--bg-muted)] px-3 py-2"
+                    className="flex items-center justify-between gap-3 rounded-xl bg-[var(--bg-muted)] px-3 py-2"
                   >
-                    <div>
-                      <p className="font-medium text-[var(--ink)]">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-[var(--ink)]">
                         {row.firstName} {row.lastName}
                       </p>
-                      <p className="text-xs text-[var(--ink-muted)]">
+                      <p className="truncate text-xs text-[var(--ink-muted)]">
                         {row.department || "—"}
                       </p>
                     </div>
-                    <span className="text-sm text-[var(--brand)]">
+                    <span className="shrink-0 text-sm text-[var(--brand)]">
                       {format(new Date(row.recordedAt), "HH:mm")}
                     </span>
                   </li>
@@ -121,14 +129,14 @@ export default async function DashboardPage() {
             {summary.records.length === 0 ? (
               <p className="text-sm text-[var(--ink-muted)]">Henüz kayıt yok.</p>
             ) : (
-              <ul className="max-h-80 space-y-2 overflow-y-auto">
+              <ul className="max-h-80 space-y-2 overflow-y-auto overscroll-contain">
                 {summary.records.slice(0, 15).map((row) => (
                   <li
                     key={row.id}
-                    className="flex items-center justify-between rounded-xl border border-[var(--border)] px-3 py-2"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] px-3 py-2"
                   >
-                    <div>
-                      <p className="font-medium text-[var(--ink)]">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-[var(--ink)]">
                         {row.firstName} {row.lastName}
                       </p>
                       <p className="text-xs text-[var(--ink-muted)]">
@@ -136,7 +144,7 @@ export default async function DashboardPage() {
                       </p>
                     </div>
                     <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
                         row.type === "giris"
                           ? "bg-emerald-50 text-emerald-700"
                           : "bg-orange-50 text-orange-700"

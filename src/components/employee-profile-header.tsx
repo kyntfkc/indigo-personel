@@ -51,7 +51,9 @@ export function EmployeeProfileHeader({
 
         <div className="min-w-0 flex-1 space-y-3 text-center sm:text-left">
           <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-            <h1 className="text-2xl font-semibold text-[var(--ink)]">{name}</h1>
+            <h1 className="text-xl font-semibold text-[var(--ink)] sm:text-2xl">
+              {name}
+            </h1>
             <span
               className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
                 employee.active
@@ -64,8 +66,7 @@ export function EmployeeProfileHeader({
           </div>
 
           <p className="text-sm text-[var(--ink-muted)]">
-            {[employee.position, employee.department].filter(Boolean).join(" · ") ||
-              "Pozisyon belirtilmemiş"}
+            {employee.department || "Departman belirtilmemiş"}
             {employee.hireDate
               ? ` · İşe giriş ${format(parseISO(employee.hireDate), "d MMM yyyy", { locale: tr })}`
               : ""}
@@ -74,9 +75,9 @@ export function EmployeeProfileHeader({
 
           <div className="flex flex-wrap justify-center gap-3 text-sm text-[var(--ink-muted)] sm:justify-start">
             {employee.email && (
-              <span className="inline-flex items-center gap-1.5">
-                <Mail className="size-3.5 text-[var(--brand)]" />
-                {employee.email}
+              <span className="inline-flex max-w-full items-center gap-1.5">
+                <Mail className="size-3.5 shrink-0 text-[var(--brand)]" />
+                <span className="break-all">{employee.email}</span>
               </span>
             )}
             {employee.phone && (
@@ -93,8 +94,27 @@ export function EmployeeProfileHeader({
             )}
           </div>
 
-          <div className="inline-flex items-center gap-2 rounded-full bg-[var(--brand-soft)] px-3 py-1.5 text-sm font-medium text-[var(--ink)]">
-            <Clock className="size-4 text-[var(--brand)]" />
+          {(employee.tcKimlik ||
+            employee.bloodType ||
+            employee.birthDate ||
+            employee.address) && (
+            <div className="space-y-1 break-words text-sm text-[var(--ink-muted)]">
+              {employee.tcKimlik && <p>T.C.: {employee.tcKimlik}</p>}
+              {employee.bloodType && <p>Kan grubu: {employee.bloodType}</p>}
+              {employee.birthDate && (
+                <p>
+                  Doğum:{" "}
+                  {format(parseISO(employee.birthDate), "d MMM yyyy", {
+                    locale: tr,
+                  })}
+                </p>
+              )}
+              {employee.address && <p>Adres: {employee.address}</p>}
+            </div>
+          )}
+
+          <div className="inline-flex max-w-full items-center gap-2 rounded-full bg-[var(--brand-soft)] px-3 py-1.5 text-sm font-medium text-[var(--ink)]">
+            <Clock className="size-4 shrink-0 text-[var(--brand)]" />
             Bu ay ({monthLabel}): {monthHours.hours} sa · {monthHours.daysPresent} gün
           </div>
 

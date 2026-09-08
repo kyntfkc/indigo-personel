@@ -18,18 +18,18 @@ export function LeaveReviewButtons({ id }: { id: string }) {
   }
 
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
       <button
         type="button"
         onClick={() => review("onaylandi")}
-        className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:opacity-90"
+        className="tap min-w-20 rounded-full bg-emerald-600 px-4 text-xs font-medium text-white transition hover:opacity-90 active:scale-[0.99] sm:min-w-0 sm:px-3 sm:py-1.5"
       >
         Onayla
       </button>
       <button
         type="button"
         onClick={() => review("reddedildi")}
-        className="rounded-full bg-red-600 px-3 py-1 text-xs font-medium text-white hover:opacity-90"
+        className="tap min-w-20 rounded-full bg-red-600 px-4 text-xs font-medium text-white transition hover:opacity-90 active:scale-[0.99] sm:min-w-0 sm:px-3 sm:py-1.5"
       >
         Reddet
       </button>

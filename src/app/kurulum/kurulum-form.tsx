@@ -26,8 +26,8 @@ export default function KurulumForm() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-[var(--bg-muted)] px-4">
-      <div className="panel w-full max-w-md !p-8">
+    <div className="flex min-h-dvh items-center justify-center bg-[var(--bg-muted)] px-4 py-8">
+      <div className="panel w-full max-w-md !p-6 sm:!p-8">
         <div className="mb-8 flex flex-col items-center gap-2 text-center">
           <IndigoLogo size="lg" />
           <h1 className="text-xl font-semibold text-[var(--ink)]">İlk Kurulum</h1>
@@ -43,7 +43,7 @@ export default function KurulumForm() {
               name="email"
               type="email"
               required
-              className="w-full rounded-full border border-[var(--border)] bg-white px-4 py-2.5 text-sm outline-none focus:border-[var(--brand)]"
+              className="field"
             />
           </div>
           <div>
@@ -53,7 +53,7 @@ export default function KurulumForm() {
               type="password"
               required
               minLength={6}
-              className="w-full rounded-full border border-[var(--border)] bg-white px-4 py-2.5 text-sm outline-none focus:border-[var(--brand)]"
+              className="field"
             />
           </div>
           <div>
@@ -63,7 +63,7 @@ export default function KurulumForm() {
               type="password"
               required
               minLength={6}
-              className="w-full rounded-full border border-[var(--border)] bg-white px-4 py-2.5 text-sm outline-none focus:border-[var(--brand)]"
+              className="field"
             />
           </div>
           {error && <p className="text-sm text-[var(--destructive)]">{error}</p>}

@@ -34,8 +34,7 @@ export function EmployeeCreateDialog() {
     router.refresh();
   }
 
-  const field =
-    "w-full rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm outline-none focus:border-[var(--brand)]";
+  const field = "field";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -46,7 +45,7 @@ export function EmployeeCreateDialog() {
           </button>
         }
       />
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Yeni Personel</DialogTitle>
         </DialogHeader>
@@ -69,25 +68,38 @@ export function EmployeeCreateDialog() {
             <label className="mb-1 block text-sm">Telefon</label>
             <input name="phone" className={field} />
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-sm">Departman</label>
-              <input name="department" className={field} />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm">Pozisyon</label>
-              <input name="position" className={field} />
-            </div>
+          <div>
+            <label className="mb-1 block text-sm">Departman</label>
+            <input name="department" className={field} />
           </div>
           <div>
             <label className="mb-1 block text-sm">İşe giriş</label>
             <input name="hireDate" type="date" className={field} />
           </div>
-          <label className="flex items-center gap-2 text-sm">
+          <div>
+            <label className="mb-1 block text-sm">T.C. Kimlik No</label>
+            <input name="tcKimlik" inputMode="numeric" maxLength={11} className={field} />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm">Kan grubu</label>
+              <input name="bloodType" placeholder="A Rh (+)" className={field} />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm">Doğum tarihi</label>
+              <input name="birthDate" type="date" className={field} />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm">Adres</label>
+            <input name="address" className={field} />
+          </div>
+          <label className="flex min-h-11 items-center gap-3 text-sm">
             <input
               type="checkbox"
               checked={createLogin}
               onChange={(e) => setCreateLogin(e.target.checked)}
+              className="size-5 accent-[var(--brand)]"
             />
             Giriş hesabı oluştur
           </label>

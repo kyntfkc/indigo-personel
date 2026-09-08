@@ -116,6 +116,34 @@ export function LeaveCalendar({
     return eachDayOfInterval({ start, end });
   }, [month]);
 
+  // Mobilde hücrelere sığmayan bilgiler (isimler, tatil adları) altta listelenir.
+  const monthEntries = useMemo(() => {
+    const monthStart = format(startOfMonth(month), "yyyy-MM-dd");
+    const monthEnd = format(endOfMonth(month), "yyyy-MM-dd");
+
+    const holidayEntries = initialHolidays
+      .filter((h) => h.date >= monthStart && h.date <= monthEnd)
+      .map((h) => ({
+        kind: "holiday" as const,
+        id: `h-${h.id}`,
+        sortDate: h.date,
+        holiday: h,
+      }));
+
+    const leaveEntries = initialLeaves
+      .filter((l) => l.startDate <= monthEnd && l.endDate >= monthStart)
+      .map((l) => ({
+        kind: "leave" as const,
+        id: `l-${l.id}`,
+        sortDate: l.startDate,
+        leave: l,
+      }));
+
+    return [...holidayEntries, ...leaveEntries].sort((a, b) =>
+      a.sortDate.localeCompare(b.sortDate)
+    );
+  }, [month, initialHolidays, initialLeaves]);
+
   function onDayClick(day: Date) {
     const key = format(day, "yyyy-MM-dd");
     if (frozenSet.has(key)) {
@@ -191,29 +219,34 @@ export function LeaveCalendar({
     });
   }
 
-  const field =
-    "w-full rounded-full border border-[var(--border)] bg-white px-4 py-2 text-sm outline-none focus:border-[var(--brand)]";
+  const field = "field";
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
         <div className="panel">
           <p className="text-xs text-[var(--ink-muted)]">İzin hakkı</p>
-          <p className="mt-1 text-2xl font-semibold">{balance.entitlement} gün</p>
+          <p className="mt-1 text-xl font-semibold sm:text-2xl">
+            {balance.entitlement} gün
+          </p>
         </div>
         <div className="panel">
           <p className="text-xs text-[var(--ink-muted)]">Kullanılan</p>
-          <p className="mt-1 text-2xl font-semibold">{balance.used} gün</p>
+          <p className="mt-1 text-xl font-semibold sm:text-2xl">
+            {balance.used} gün
+          </p>
         </div>
         <div className="panel">
           <p className="text-xs text-[var(--ink-muted)]">Kalan</p>
-          <p className="mt-1 text-2xl font-semibold text-[var(--brand)]">
+          <p className="mt-1 text-xl font-semibold text-[var(--brand)] sm:text-2xl">
             {balance.remaining} gün
           </p>
         </div>
         <div className="panel">
           <p className="text-xs text-[var(--ink-muted)]">Bekleyen</p>
-          <p className="mt-1 text-2xl font-semibold">{balance.pending} gün</p>
+          <p className="mt-1 text-xl font-semibold sm:text-2xl">
+            {balance.pending} gün
+          </p>
         </div>
       </div>
 
@@ -226,7 +259,7 @@ export function LeaveCalendar({
           >
             <ChevronLeft className="size-4" />
           </button>
-          <h2 className="text-lg font-semibold capitalize">
+          <h2 className="truncate text-base font-semibold capitalize sm:text-lg">
             {format(month, "MMMM yyyy", { locale: tr })}
           </h2>
           <button
@@ -243,7 +276,7 @@ export function LeaveCalendar({
           kilitlidir; resmi tatiller görseldir, aralığa dahil edilebilir.
         </p>
 
-        <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-[var(--ink-muted)]">
+        <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-[var(--ink-muted)] sm:text-xs">
           {["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"].map((d) => (
             <div key={d} className="py-2">
               {d}
@@ -251,7 +284,73 @@ export function LeaveCalendar({
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-1">
+        {/* Mobil: kompakt ızgara. Detaylar hücreye sığmadığı için altta listelenir. */}
+        <div className="grid grid-cols-7 gap-1 lg:hidden">
+          {days.map((day) => {
+            const key = format(day, "yyyy-MM-dd");
+            const frozen = frozenSet.has(key);
+            const holidayName = holidayMap.get(key);
+            const inMonth = isSameMonth(day, month);
+            const selected = isSelected(day);
+            const dayLeaves = initialLeaves.filter((l) =>
+              dateInRange(day, l.startDate, l.endDate)
+            );
+            const hasApproved = dayLeaves.some((l) => l.status === "onaylandi");
+            const hasPending = dayLeaves.some((l) => l.status !== "onaylandi");
+
+            return (
+              <button
+                key={key}
+                type="button"
+                disabled={frozen}
+                onClick={() => onDayClick(day)}
+                aria-label={[
+                  format(day, "d MMMM yyyy", { locale: tr }),
+                  holidayName,
+                  frozen ? "dondurulmuş" : null,
+                  dayLeaves.length ? `${dayLeaves.length} izin` : null,
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+                className={`flex aspect-square min-h-11 flex-col items-center justify-center rounded-xl border transition ${
+                  frozen
+                    ? "cursor-not-allowed border-dashed border-gray-300 bg-gray-100"
+                    : selected
+                      ? "border-[var(--brand)] bg-[var(--brand)] text-white"
+                      : holidayName
+                        ? "border-[var(--brand)]/40 bg-[var(--brand-soft)] active:bg-[var(--brand-soft)]"
+                        : "border-[var(--border)] bg-white active:bg-[var(--brand-soft)]"
+                } ${!inMonth ? "opacity-40" : ""}`}
+              >
+                <span
+                  className={`text-sm font-semibold ${
+                    selected
+                      ? "text-white"
+                      : isSameDay(day, new Date())
+                        ? "text-[var(--brand)]"
+                        : "text-[var(--ink)]"
+                  }`}
+                >
+                  {format(day, "d")}
+                </span>
+                <span className="mt-0.5 flex h-2 items-center gap-0.5">
+                  {frozen && <Lock className="size-2.5 text-gray-500" />}
+                  {holidayName && (
+                    <span className="size-1.5 rounded-full bg-[var(--brand)]" />
+                  )}
+                  {hasApproved && (
+                    <span className="size-1.5 rounded-full bg-emerald-500" />
+                  )}
+                  {hasPending && (
+                    <span className="size-1.5 rounded-full bg-amber-500" />
+                  )}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="hidden grid-cols-7 gap-1 lg:grid">
           {days.map((day) => {
             const key = format(day, "yyyy-MM-dd");
             const frozen = frozenSet.has(key);
@@ -335,12 +434,77 @@ export function LeaveCalendar({
             <span className="size-2 rounded-sm bg-[var(--brand)]/50" /> Resmi tatil
           </span>
         </div>
+
+        {/* Mobilde isimler ve tatil adları yalnızca burada okunabilir. */}
+        <div className="mt-4 border-t border-[var(--border)] pt-4 lg:hidden">
+          <h3 className="mb-2 text-sm font-semibold capitalize">
+            {format(month, "MMMM", { locale: tr })} ayrıntıları
+          </h3>
+          {monthEntries.length === 0 ? (
+            <p className="text-sm text-[var(--ink-muted)]">
+              Bu ay izin veya resmi tatil yok.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {monthEntries.map((entry) =>
+                entry.kind === "holiday" ? (
+                  <li
+                    key={entry.id}
+                    className="flex items-start gap-2 rounded-xl bg-[var(--brand-soft)] px-3 py-2 text-sm"
+                  >
+                    <span className="mt-1.5 size-2 shrink-0 rounded-full bg-[var(--brand)]" />
+                    <div className="min-w-0">
+                      <p className="font-medium text-[var(--ink)]">
+                        {entry.holiday.name}
+                      </p>
+                      <p className="text-xs text-[var(--ink-muted)]">
+                        {format(parseISO(entry.holiday.date), "d MMMM EEEE", {
+                          locale: tr,
+                        })}
+                      </p>
+                    </div>
+                  </li>
+                ) : (
+                  <li
+                    key={entry.id}
+                    className="flex items-start gap-2 rounded-xl bg-[var(--bg-muted)] px-3 py-2 text-sm"
+                  >
+                    <span
+                      className={`mt-1.5 size-2 shrink-0 rounded-full ${
+                        entry.leave.status === "onaylandi"
+                          ? "bg-emerald-500"
+                          : "bg-amber-500"
+                      }`}
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-[var(--ink)]">
+                        {entry.leave.firstName} {entry.leave.lastName}
+                      </p>
+                      <p className="text-xs text-[var(--ink-muted)]">
+                        {leaveTypeLabels[entry.leave.type] || entry.leave.type} ·{" "}
+                        {format(parseISO(entry.leave.startDate), "d MMM", {
+                          locale: tr,
+                        })}
+                        {entry.leave.endDate !== entry.leave.startDate
+                          ? ` — ${format(parseISO(entry.leave.endDate), "d MMM", { locale: tr })}`
+                          : ""}
+                      </p>
+                    </div>
+                  </li>
+                )
+              )}
+            </ul>
+          )}
+        </div>
       </div>
 
       {isAdmin && (
         <div className="panel space-y-4">
           <h3 className="font-semibold">Dondurulmuş günler</h3>
-          <form onSubmit={submitFreeze} className="flex flex-wrap items-end gap-3">
+          <form
+            onSubmit={submitFreeze}
+            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto] lg:items-end"
+          >
             <div>
               <label className="mb-1 block text-xs text-[var(--ink-muted)]">
                 Başlangıç
@@ -371,7 +535,7 @@ export function LeaveCalendar({
                 className={field}
               />
             </div>
-            <div className="min-w-[200px] flex-1">
+            <div className="sm:col-span-2 lg:col-span-1">
               <label className="mb-1 block text-xs text-[var(--ink-muted)]">
                 Neden
               </label>
@@ -382,7 +546,11 @@ export function LeaveCalendar({
                 className={field}
               />
             </div>
-            <button type="submit" disabled={pending} className="btn-primary">
+            <button
+              type="submit"
+              disabled={pending}
+              className="btn-primary w-full sm:col-span-2 lg:col-span-1 lg:w-auto"
+            >
               Dondur
             </button>
           </form>
@@ -396,9 +564,9 @@ export function LeaveCalendar({
               {initialFrozen.map((f) => (
                 <li
                   key={f.id}
-                  className="flex items-center justify-between rounded-xl bg-[var(--bg-muted)] px-3 py-2 text-sm"
+                  className="flex items-center justify-between gap-3 rounded-xl bg-[var(--bg-muted)] px-3 py-2 text-sm"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <span className="font-medium">
                       {format(parseISO(f.startDate), "d MMM yyyy", {
                         locale: tr,
@@ -417,7 +585,7 @@ export function LeaveCalendar({
                   </div>
                   <button
                     type="button"
-                    className="text-xs text-red-600 hover:underline"
+                    className="tap shrink-0 rounded-full px-3 text-xs font-medium text-red-600 transition hover:bg-red-50 active:bg-red-100 sm:px-2 sm:py-1"
                     onClick={() => setPendingFrozenDelete(f)}
                   >
                     Kaldır
@@ -503,7 +671,7 @@ export function LeaveCalendar({
                 : ""}
             </p>
           )}
-          <div className="mt-2 flex justify-end gap-2">
+          <div className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
               type="button"
               className="btn-outline"

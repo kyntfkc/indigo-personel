@@ -24,11 +24,11 @@ export default async function KapiPage({
   const homeHref = session.user.role === "admin" ? "/" : "/benim";
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--bg-muted)] px-4">
-      <div className="panel w-full max-w-md space-y-6 !p-8 text-center">
+    <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--bg-muted)] px-4 py-8">
+      <div className="panel w-full max-w-md space-y-6 !p-6 text-center sm:!p-8">
         <IndigoLogo size="lg" className="mx-auto justify-center" />
 
-        {result.error ? (
+        {"error" in result ? (
           <>
             <h1 className="text-xl font-semibold text-[var(--destructive)]">
               İşlem başarısız
@@ -58,7 +58,7 @@ export default async function KapiPage({
           </>
         )}
 
-        <Link href={homeHref} className="btn-primary inline-flex">
+        <Link href={homeHref} className="btn-primary w-full sm:w-auto">
           Panele dön
         </Link>
       </div>

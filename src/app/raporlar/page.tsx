@@ -78,7 +78,7 @@ export default async function RaporlarPage({
             <Link
               key={t.id}
               href={`/raporlar?tab=${t.id}`}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+              className={`tap rounded-full px-4 text-sm font-medium transition sm:py-2 ${
                 tab === t.id
                   ? "bg-[var(--brand)] text-white"
                   : "bg-white text-[var(--ink)]/70 hover:bg-[var(--brand-soft)]"
@@ -91,7 +91,7 @@ export default async function RaporlarPage({
 
         {tab === "ozet" && report && (
           <>
-            <form className="panel flex flex-wrap items-end gap-3">
+            <form className="panel grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
               <input type="hidden" name="tab" value="ozet" />
               <div>
                 <label className="mb-1 block text-xs text-[var(--ink-muted)]">
@@ -101,18 +101,14 @@ export default async function RaporlarPage({
                   type="number"
                   name="year"
                   defaultValue={year}
-                  className="w-28 rounded-full border border-[var(--border)] px-3 py-2 text-sm"
+                  className="field"
                 />
               </div>
               <div>
                 <label className="mb-1 block text-xs text-[var(--ink-muted)]">
                   Ay
                 </label>
-                <select
-                  name="month"
-                  defaultValue={month}
-                  className="rounded-full border border-[var(--border)] px-3 py-2 text-sm"
-                >
+                <select name="month" defaultValue={month} className="field">
                   {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                     <option key={m} value={m}>
                       {m}
@@ -120,33 +116,33 @@ export default async function RaporlarPage({
                   ))}
                 </select>
               </div>
-              <button type="submit" className="btn-primary">
+              <button type="submit" className="btn-primary w-full sm:w-auto">
                 Göster
               </button>
             </form>
 
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-3 sm:gap-4">
               <div className="panel">
                 <p className="text-sm text-[var(--ink-muted)]">Toplam Mesai</p>
-                <p className="mt-1 text-3xl font-semibold">
+                <p className="mt-1 text-2xl font-semibold sm:text-3xl">
                   {report.totals.totalHours} sa
                 </p>
               </div>
               <div className="panel">
                 <p className="text-sm text-[var(--ink-muted)]">Ortalama</p>
-                <p className="mt-1 text-3xl font-semibold">
+                <p className="mt-1 text-2xl font-semibold sm:text-3xl">
                   {report.totals.avgHours} sa
                 </p>
               </div>
               <div className="panel">
                 <p className="text-sm text-[var(--ink-muted)]">İzin Günü</p>
-                <p className="mt-1 text-3xl font-semibold">
+                <p className="mt-1 text-2xl font-semibold sm:text-3xl">
                   {report.totals.totalLeaveDays}
                 </p>
               </div>
             </div>
 
-            <div className="panel overflow-x-auto !p-0">
+            <div className="panel table-scroll !p-0">
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-[var(--border)] bg-[var(--bg-muted)] text-[var(--ink-muted)]">
                   <tr>
@@ -179,7 +175,7 @@ export default async function RaporlarPage({
         )}
 
         {(tab === "gec" || tab === "devamsizlik") && (
-          <form className="panel flex flex-wrap items-end gap-3">
+          <form className="panel grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
             <input type="hidden" name="tab" value={tab} />
             <div>
               <label className="mb-1 block text-xs text-[var(--ink-muted)]">
@@ -189,7 +185,7 @@ export default async function RaporlarPage({
                 type="date"
                 name="from"
                 defaultValue={fromKey}
-                className="rounded-full border border-[var(--border)] px-3 py-2 text-sm"
+                className="field"
               />
             </div>
             <div>
@@ -200,17 +196,17 @@ export default async function RaporlarPage({
                 type="date"
                 name="to"
                 defaultValue={toKey}
-                className="rounded-full border border-[var(--border)] px-3 py-2 text-sm"
+                className="field"
               />
             </div>
-            <button type="submit" className="btn-primary">
+            <button type="submit" className="btn-primary w-full sm:w-auto">
               Göster
             </button>
           </form>
         )}
 
         {tab === "gec" && late && (
-          <div className="panel overflow-x-auto !p-0">
+          <div className="panel table-scroll !p-0">
             <div className="border-b border-[var(--border)] px-4 py-3 text-sm text-[var(--ink-muted)]">
               Mesai başlangıcı: {late.workStart} · {late.rows.length} kayıt
             </div>
@@ -239,7 +235,7 @@ export default async function RaporlarPage({
                       key={`${r.employeeId}-${r.dayKey}`}
                       className="border-b border-[var(--border)] last:border-0"
                     >
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {format(parseISO(r.dayKey), "d MMM yyyy", {
                           locale: tr,
                         })}
@@ -260,7 +256,7 @@ export default async function RaporlarPage({
         )}
 
         {tab === "devamsizlik" && absences && (
-          <div className="panel overflow-x-auto !p-0">
+          <div className="panel table-scroll !p-0">
             <div className="border-b border-[var(--border)] px-4 py-3 text-sm text-[var(--ink-muted)]">
               Hafta sonu ve resmi tatiller hariç · {absences.rows.length} kayıt
             </div>
@@ -288,7 +284,7 @@ export default async function RaporlarPage({
                       key={`${r.employeeId}-${r.dayKey}`}
                       className="border-b border-[var(--border)] last:border-0"
                     >
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {format(parseISO(r.dayKey), "d MMM yyyy", {
                           locale: tr,
                         })}
@@ -306,7 +302,7 @@ export default async function RaporlarPage({
         )}
 
         {tab === "audit" && audits && (
-          <div className="panel overflow-x-auto !p-0">
+          <div className="panel table-scroll !p-0">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-[var(--border)] bg-[var(--bg-muted)] text-[var(--ink-muted)]">
                 <tr>
@@ -343,7 +339,7 @@ export default async function RaporlarPage({
                       <td className="px-4 py-3 font-mono text-xs">
                         {a.action}
                       </td>
-                      <td className="px-4 py-3">{a.summary}</td>
+                      <td className="max-w-72 px-4 py-3">{a.summary}</td>
                     </tr>
                   ))
                 )}
