@@ -11,6 +11,7 @@ declare module "next-auth" {
   interface User {
     role: AppRole;
     employeeId?: string | null;
+    remember?: boolean;
   }
 
   interface Session {
@@ -24,18 +25,24 @@ declare module "next-auth" {
   }
 }
 
+const SESSION_MAX_AGE_REMEMBER = 30 * 24 * 60 * 60; // 30 gün
+const SESSION_MAX_AGE_DEFAULT = 12 * 60 * 60; // 12 saat
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       credentials: {
         login: { label: "Kullanıcı adı veya e-posta", type: "text" },
         password: { label: "Şifre", type: "password" },
+        remember: { label: "Beni hatırla", type: "text" },
       },
       async authorize(credentials) {
         const login = String(credentials?.login || "")
           .trim()
           .toLowerCase();
         const password = credentials?.password as string | undefined;
+        const remember =
+          credentials?.remember === "true" || credentials?.remember === true;
         if (!login || !password) return null;
 
         const db = getDb();
@@ -75,6 +82,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: employee
             ? `${employee.firstName} ${employee.lastName}`
             : user.username ?? user.email ?? "",
+          remember,
         };
       },
     }),
@@ -85,6 +93,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.role = user.role;
         token.employeeId = user.employeeId;
         token.sub = user.id;
+        token.remember = Boolean(user.remember);
+        const maxAge = token.remember
+          ? SESSION_MAX_AGE_REMEMBER
+          : SESSION_MAX_AGE_DEFAULT;
+        token.exp = Math.floor(Date.now() / 1000) + maxAge;
       }
       return token;
     },
@@ -102,6 +115,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   session: {
     strategy: "jwt",
+    maxAge: SESSION_MAX_AGE_REMEMBER,
   },
   trustHost: true,
 });
