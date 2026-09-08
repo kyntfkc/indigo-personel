@@ -36,6 +36,12 @@ export function isWeekend(dayKey: string) {
   return weekday === "Sat" || weekday === "Sun";
 }
 
-export function overtimeHoursForDay(dayKey: string) {
-  return isWeekend(dayKey) ? 8 : 4;
+export function overtimeHoursForDay(
+  dayKey: string,
+  settings: { weekday: number; weekend: number } = {
+    weekday: 4,
+    weekend: 8,
+  }
+) {
+  return isWeekend(dayKey) ? settings.weekend : settings.weekday;
 }

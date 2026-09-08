@@ -1,7 +1,7 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { and, asc, desc, eq, isNull, isNotNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, isNotNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { writeAudit } from "@/lib/audit";
@@ -21,6 +21,10 @@ import { getTurkeyHolidays } from "@/lib/turkey-holidays";
 
 const WORK_START_KEY = "work_start_time";
 const DEFAULT_WORK_START = "09:00";
+const OT_WEEKDAY_KEY = "overtime_weekday_hours";
+const OT_WEEKEND_KEY = "overtime_weekend_hours";
+const DEFAULT_OT_WEEKDAY = 4;
+const DEFAULT_OT_WEEKEND = 8;
 
 async function requireAdmin() {
   const session = await auth();
@@ -140,6 +144,72 @@ export async function setWorkStartTime(formData: FormData) {
   });
 
   revalidatePath("/ayarlar");
+  revalidatePath("/raporlar");
+  return { success: true };
+}
+
+export async function getOvertimeHourSettings() {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(siteSettings)
+    .where(inArray(siteSettings.key, [OT_WEEKDAY_KEY, OT_WEEKEND_KEY]));
+  const map = new Map(rows.map((r) => [r.key, r.value]));
+  const weekday = Number(map.get(OT_WEEKDAY_KEY));
+  const weekend = Number(map.get(OT_WEEKEND_KEY));
+  return {
+    weekday:
+      Number.isFinite(weekday) && weekday > 0
+        ? weekday
+        : DEFAULT_OT_WEEKDAY,
+    weekend:
+      Number.isFinite(weekend) && weekend > 0
+        ? weekend
+        : DEFAULT_OT_WEEKEND,
+  };
+}
+
+export async function setOvertimeHourSettings(formData: FormData) {
+  await requireAdmin();
+  const weekday = Number(String(formData.get("weekdayHours") || "").trim());
+  const weekend = Number(String(formData.get("weekendHours") || "").trim());
+
+  if (!Number.isFinite(weekday) || weekday <= 0 || weekday > 24) {
+    return { error: "Hafta içi saat 1–24 arasında olmalı" };
+  }
+  if (!Number.isFinite(weekend) || weekend <= 0 || weekend > 24) {
+    return { error: "Hafta sonu saat 1–24 arasında olmalı" };
+  }
+
+  const weekdayValue = String(Math.round(weekday * 10) / 10);
+  const weekendValue = String(Math.round(weekend * 10) / 10);
+  const db = getDb();
+  const now = new Date();
+
+  await db
+    .insert(siteSettings)
+    .values({ key: OT_WEEKDAY_KEY, value: weekdayValue, updatedAt: now })
+    .onConflictDoUpdate({
+      target: siteSettings.key,
+      set: { value: weekdayValue, updatedAt: now },
+    });
+  await db
+    .insert(siteSettings)
+    .values({ key: OT_WEEKEND_KEY, value: weekendValue, updatedAt: now })
+    .onConflictDoUpdate({
+      target: siteSettings.key,
+      set: { value: weekendValue, updatedAt: now },
+    });
+
+  await writeAudit({
+    action: "settings.overtime_hours",
+    entityType: "site_settings",
+    entityId: "overtime_hours",
+    summary: `Fazla mesai saatleri güncellendi (hafta içi ${weekdayValue}, hafta sonu ${weekendValue})`,
+  });
+
+  revalidatePath("/ayarlar");
+  revalidatePath("/mesai");
   revalidatePath("/raporlar");
   return { success: true };
 }

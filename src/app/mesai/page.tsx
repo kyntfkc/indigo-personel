@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { listEmployees } from "@/lib/actions/employees";
 import { listOvertime } from "@/lib/actions/overtime";
+import { getOvertimeHourSettings } from "@/lib/actions/settings";
 import {
   CreateOvertimeDialog,
   DeleteOvertimeButton,
@@ -26,13 +27,14 @@ export default async function MesaiPage({
   const from = params.from || today;
   const to = params.to || today;
 
-  const [records, employees] = await Promise.all([
+  const [records, employees, hourSettings] = await Promise.all([
     listOvertime({
       from,
       to,
       employeeId: params.employeeId,
     }),
     listEmployees(),
+    getOvertimeHourSettings(),
   ]);
 
   return (
@@ -42,10 +44,14 @@ export default async function MesaiPage({
           <div>
             <h1 className="text-2xl font-semibold">Fazla mesai</h1>
             <p className="text-sm text-[var(--ink-muted)]">
-              Hafta içi +4 sa · Hafta sonu +8 sa
+              Hafta içi +{hourSettings.weekday} sa · Hafta sonu +
+              {hourSettings.weekend} sa
             </p>
           </div>
-          <CreateOvertimeDialog employees={employees} />
+          <CreateOvertimeDialog
+            employees={employees}
+            hourSettings={hourSettings}
+          />
         </div>
 
         <form className="panel grid gap-3 sm:grid-cols-4">

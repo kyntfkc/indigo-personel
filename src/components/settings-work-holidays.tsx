@@ -22,6 +22,7 @@ import {
   removeHoliday,
   restoreHoliday,
   seedTurkeyHolidays,
+  setOvertimeHourSettings,
   setWorkStartTime,
 } from "@/lib/actions/settings";
 import {
@@ -68,6 +69,76 @@ export function WorkStartForm({ workStart }: { workStart: string }) {
           defaultValue={workStart}
           className={field}
         />
+      </div>
+      <button
+        type="submit"
+        disabled={pending}
+        className="btn-primary w-full sm:w-auto"
+      >
+        {pending ? "Kaydediliyor..." : "Kaydet"}
+      </button>
+    </form>
+  );
+}
+
+export function OvertimeHoursForm({
+  weekday,
+  weekend,
+}: {
+  weekday: number;
+  weekend: number;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <form
+      className="panel space-y-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const fd = new FormData(e.currentTarget);
+        startTransition(async () => {
+          const result = await setOvertimeHourSettings(fd);
+          if (result.error) {
+            toast.error(result.error);
+            return;
+          }
+          toast.success("Fazla mesai saatleri güncellendi");
+          router.refresh();
+        });
+      }}
+    >
+      <h2 className="font-semibold">Fazla mesai saatleri</h2>
+      <p className="text-sm text-[var(--ink-muted)]">
+        Yeni kayıtlarda varsayılan süreler. Kayıt eklerken saat değiştirilebilir.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-sm">Hafta içi (sa)</label>
+          <input
+            name="weekdayHours"
+            type="number"
+            min={0.5}
+            max={24}
+            step={0.5}
+            required
+            defaultValue={weekday}
+            className={field}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-sm">Hafta sonu (sa)</label>
+          <input
+            name="weekendHours"
+            type="number"
+            min={0.5}
+            max={24}
+            step={0.5}
+            required
+            defaultValue={weekend}
+            className={field}
+          />
+        </div>
       </div>
       <button
         type="submit"

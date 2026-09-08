@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import {
   createOvertime,
@@ -27,24 +27,35 @@ function todayKey() {
 
 export function CreateOvertimeDialog({
   employees,
+  hourSettings,
 }: {
   employees: { id: string; firstName: string; lastName: string; active?: boolean }[];
+  hourSettings: { weekday: number; weekend: number };
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [day, setDay] = useState(todayKey);
+  const [hours, setHours] = useState(() =>
+    String(overtimeHoursForDay(todayKey(), hourSettings))
+  );
   const activeEmployees = employees.filter((e) => e.active !== false);
 
   const preview = useMemo(() => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
     const weekend = isWeekend(day);
+    const suggested = overtimeHoursForDay(day, hourSettings);
     return {
       weekend,
-      hours: overtimeHoursForDay(day),
+      suggested,
       label: weekend ? "Hafta sonu fazla mesai" : "Hafta içi fazla mesai",
     };
-  }, [day]);
+  }, [day, hourSettings]);
+
+  useEffect(() => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
+    setHours(String(overtimeHoursForDay(day, hourSettings)));
+  }, [day, hourSettings]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -98,10 +109,24 @@ export function CreateOvertimeDialog({
           </div>
           {preview && (
             <p className="rounded-2xl bg-[var(--bg-muted)] px-4 py-3 text-sm text-[var(--ink)]">
-              {preview.label}:{" "}
-              <span className="font-semibold">+{preview.hours} sa</span>
+              {preview.label} · varsayılan{" "}
+              <span className="font-semibold">+{preview.suggested} sa</span>
             </p>
           )}
+          <div>
+            <label className="mb-1 block text-sm">Saat</label>
+            <input
+              name="hours"
+              type="number"
+              min={0.5}
+              max={24}
+              step={0.5}
+              required
+              value={hours}
+              onChange={(e) => setHours(e.target.value)}
+              className="field"
+            />
+          </div>
           <div>
             <label className="mb-1 block text-sm">Not</label>
             <input name="note" className="field" />

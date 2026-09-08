@@ -7,6 +7,7 @@ import { getDb } from "@/lib/db";
 import { employees, overtime } from "@/lib/db/schema";
 import { writeAudit } from "@/lib/audit";
 import { overtimeHoursForDay } from "@/lib/istanbul-time";
+import { getOvertimeHourSettings } from "@/lib/actions/settings";
 
 async function requireAdmin() {
   const session = await auth();
@@ -61,6 +62,7 @@ export async function createOvertime(formData: FormData) {
   const employeeId = String(formData.get("employeeId") || "");
   const day = String(formData.get("day") || "").trim();
   const note = String(formData.get("note") || "").trim() || null;
+  const hoursRaw = String(formData.get("hours") || "").trim();
 
   if (!employeeId || !day) {
     return { error: "Eksik alanlar" };
@@ -77,7 +79,13 @@ export async function createOvertime(formData: FormData) {
   if (!employee) return { error: "Personel bulunamadı" };
   if (!employee.active) return { error: "Personel pasif durumda" };
 
-  const hours = overtimeHoursForDay(day);
+  const settings = await getOvertimeHourSettings();
+  const defaultHours = overtimeHoursForDay(day, settings);
+  const parsedHours = hoursRaw === "" ? defaultHours : Number(hoursRaw);
+  if (!Number.isFinite(parsedHours) || parsedHours <= 0 || parsedHours > 24) {
+    return { error: "Saat 1–24 arasında olmalı" };
+  }
+  const hours = Math.round(parsedHours * 10) / 10;
 
   const [existing] = await db
     .select({ id: overtime.id })

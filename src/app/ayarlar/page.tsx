@@ -9,9 +9,11 @@ import { AdminCreateForm } from "@/components/admin-create-form";
 import {
   BackupExportPanel,
   HolidaysPanel,
+  OvertimeHoursForm,
   WorkStartForm,
 } from "@/components/settings-work-holidays";
 import {
+  getOvertimeHourSettings,
   getWorkStartTime,
   listAdmins,
   listHolidays,
@@ -21,9 +23,10 @@ export default async function AyarlarPage() {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/giris");
 
-  const [admins, workStart, holidays] = await Promise.all([
+  const [admins, workStart, overtimeHours, holidays] = await Promise.all([
     listAdmins(),
     getWorkStartTime(),
+    getOvertimeHourSettings(),
     listHolidays(),
   ]);
 
@@ -39,8 +42,13 @@ export default async function AyarlarPage() {
 
         <div className="grid gap-6 lg:grid-cols-2">
           <WorkStartForm workStart={workStart} />
-          <BackupExportPanel />
+          <OvertimeHoursForm
+            weekday={overtimeHours.weekday}
+            weekend={overtimeHours.weekend}
+          />
         </div>
+
+        <BackupExportPanel />
 
         <HolidaysPanel holidays={holidays} />
 
