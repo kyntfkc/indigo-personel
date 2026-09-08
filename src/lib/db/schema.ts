@@ -6,6 +6,7 @@ import {
   boolean,
   date,
   integer,
+  numeric,
   pgEnum,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
@@ -29,6 +30,7 @@ export const leaveStatusEnum = pgEnum("leave_status", [
   "onaylandi",
   "reddedildi",
 ]);
+export const paymentTypeEnum = pgEnum("payment_type", ["prim", "mesai"]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -103,6 +105,23 @@ export const overtime = pgTable(
   },
   (t) => [uniqueIndex("overtime_employee_day_uidx").on(t.employeeId, t.day)]
 );
+
+export const employeePayments = pgTable("employee_payments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  employeeId: uuid("employee_id")
+    .notNull()
+    .references(() => employees.id, { onDelete: "cascade" }),
+  type: paymentTypeEnum("type").notNull(),
+  amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+  day: date("day").notNull(),
+  note: text("note"),
+  createdBy: uuid("created_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
 
 export const leaveRequests = pgTable("leave_requests", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -197,6 +216,7 @@ export const employeesRelations = relations(employees, ({ one, many }) => ({
   }),
   attendance: many(attendance),
   overtime: many(overtime),
+  payments: many(employeePayments),
   leaveRequests: many(leaveRequests),
 }));
 
@@ -217,6 +237,20 @@ export const overtimeRelations = relations(overtime, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+export const employeePaymentsRelations = relations(
+  employeePayments,
+  ({ one }) => ({
+    employee: one(employees, {
+      fields: [employeePayments.employeeId],
+      references: [employees.id],
+    }),
+    creator: one(users, {
+      fields: [employeePayments.createdBy],
+      references: [users.id],
+    }),
+  })
+);
 
 export const leaveRequestsRelations = relations(leaveRequests, ({ one }) => ({
   employee: one(employees, {
@@ -240,6 +274,7 @@ export type User = typeof users.$inferSelect;
 export type Employee = typeof employees.$inferSelect;
 export type Attendance = typeof attendance.$inferSelect;
 export type Overtime = typeof overtime.$inferSelect;
+export type EmployeePayment = typeof employeePayments.$inferSelect;
 export type LeaveRequest = typeof leaveRequests.$inferSelect;
 export type FrozenDate = typeof frozenDates.$inferSelect;
 export type DoorStation = typeof doorStations.$inferSelect;

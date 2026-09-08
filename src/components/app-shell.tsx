@@ -14,6 +14,7 @@ import {
   User,
   Menu,
   Settings,
+  Wallet,
   X,
 } from "lucide-react";
 import { IndigoLogo } from "./indigo-logo";
@@ -25,6 +26,7 @@ const adminLinks = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/personel", label: "Personel", icon: Users },
   { href: "/mesai", label: "Fazla Mesai", icon: Clock },
+  { href: "/prim", label: "Prim / Mesai", icon: Wallet },
   { href: "/takvim", label: "Takvim", icon: CalendarRange },
   { href: "/izin", label: "İzin Onay", icon: CalendarDays },
   { href: "/raporlar", label: "Raporlar", icon: BarChart3 },

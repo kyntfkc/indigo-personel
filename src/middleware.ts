@@ -34,6 +34,7 @@ export default auth((req) => {
       pathname.startsWith("/personel") ||
       pathname.startsWith("/kiosk") ||
       pathname.startsWith("/mesai") ||
+      pathname.startsWith("/prim") ||
       pathname.startsWith("/izin") ||
       pathname.startsWith("/raporlar") ||
       pathname.startsWith("/ayarlar")) &&
