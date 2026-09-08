@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import QRCode from "qrcode";
 import { toast } from "sonner";
 import { regenerateDoorToken } from "@/lib/actions/attendance";
 import type { DoorStation } from "@/lib/db/schema";
@@ -15,26 +15,16 @@ import {
 
 export function DoorQrPanel({
   station,
-  baseUrl,
+  url,
+  qrSvg,
 }: {
   station: DoorStation;
-  baseUrl: string;
+  url: string;
+  qrSvg: string;
 }) {
   const router = useRouter();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [pending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const url = `${baseUrl}/kapi/${station.token}`;
-
-  useEffect(() => {
-    if (!canvasRef.current) return;
-    // Yüksek çözünürlükte üretilip CSS ile küçültülür; dar ekranda taşmaz.
-    QRCode.toCanvas(canvasRef.current, url, {
-      width: 560,
-      margin: 2,
-      color: { dark: "#1e1e20", light: "#ffffff" },
-    });
-  }, [url]);
 
   function onRegenerate() {
     startTransition(async () => {
@@ -50,25 +40,30 @@ export function DoorQrPanel({
   }
 
   return (
-    <div className="panel mx-auto max-w-lg space-y-6 text-center">
-      <div>
-        <h1 className="text-xl font-semibold sm:text-2xl">{station.name}</h1>
-        <p className="mt-2 text-sm text-[var(--ink-muted)]">
-          Bu QR kodu kapıya asın. Personel telefonunda giriş yapmışken okutsun.
+    <div className="mx-auto max-w-lg space-y-6">
+      <div className="panel space-y-8 text-center print:flex print:min-h-[240mm] print:flex-col print:items-center print:justify-center print:space-y-10 print:rounded-none print:border-0 print:p-0 print:shadow-none">
+        <Image
+          src="/indigo-logo.png"
+          alt="indigo"
+          width={566}
+          height={246}
+          className="mx-auto h-auto w-[180px] object-contain sm:w-[220px] print:w-[50mm]"
+          priority
+        />
+
+        <div
+          className="mx-auto w-full max-w-[320px] overflow-hidden rounded-2xl bg-white p-5 print:max-w-[150mm] print:w-full print:rounded-none print:p-6 [&_svg]:block [&_svg]:h-auto [&_svg]:w-full [&_svg]:max-w-full"
+          role="img"
+          aria-label={`${station.name} QR kodu`}
+          dangerouslySetInnerHTML={{ __html: qrSvg }}
+        />
+
+        <p className="text-sm font-medium text-[var(--ink)] print:text-base">
+          Giriş ve çıkış için okutun
         </p>
       </div>
 
-      <div className="flex justify-center rounded-2xl bg-white p-2 sm:p-4">
-        <canvas
-          ref={canvasRef}
-          className="h-auto w-full max-w-[280px]"
-          aria-label="Kapı QR kodu"
-        />
-      </div>
-
-      <p className="break-all text-xs text-[var(--ink-muted)]">{url}</p>
-
-      <div className="flex flex-wrap justify-center gap-3">
+      <div className="flex flex-wrap justify-center gap-3 print:hidden">
         <a href={url} target="_blank" rel="noreferrer" className="btn-outline">
           Bağlantıyı aç
         </a>
@@ -89,39 +84,36 @@ export function DoorQrPanel({
         </button>
       </div>
 
-      <p className="text-xs text-[var(--ink-muted)]">
-        Akşam zorunlu çıkış yok. Gece yarısından sonra açık mesailer otomatik
-        18:00 çıkış olarak işlenir.
-      </p>
-
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Kapı QR yenilensin mi?</DialogTitle>
-          </DialogHeader>
-          <p className="text-left text-sm text-[var(--ink-muted)]">
-            Eski kod geçersiz olur, kapıdaki çıktıyı yenilemeniz gerekir.
-          </p>
-          <div className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              className="btn-outline"
-              disabled={pending}
-              onClick={() => setConfirmOpen(false)}
-            >
-              Vazgeç
-            </button>
-            <button
-              type="button"
-              className="btn-primary"
-              disabled={pending}
-              onClick={onRegenerate}
-            >
-              {pending ? "Yenileniyor..." : "Yenile"}
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <div className="print:hidden">
+        <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Kapı QR yenilensin mi?</DialogTitle>
+            </DialogHeader>
+            <p className="text-left text-sm text-[var(--ink-muted)]">
+              Eski kod geçersiz olur, kapıdaki çıktıyı yenilemeniz gerekir.
+            </p>
+            <div className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                className="btn-outline"
+                disabled={pending}
+                onClick={() => setConfirmOpen(false)}
+              >
+                Vazgeç
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={pending}
+                onClick={onRegenerate}
+              >
+                {pending ? "Yenileniyor..." : "Yenile"}
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 }

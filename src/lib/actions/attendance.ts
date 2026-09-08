@@ -1,6 +1,6 @@
 "use server";
 
-import { and, desc, eq, gte, lte } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
@@ -13,6 +13,8 @@ import {
   previousIstanbulDateKey,
 } from "@/lib/istanbul-time";
 import { writeAudit } from "@/lib/audit";
+import { getWorkStartTime } from "@/lib/actions/settings";
+import { workStartDateTime } from "@/lib/work-calendar";
 
 const COOLDOWN_MS = 60_000;
 
@@ -249,35 +251,218 @@ export async function listAttendance(options?: {
   return rows;
 }
 
+async function assertAttendanceSequence(input: {
+  employeeId: string;
+  type: "giris" | "cikis";
+  recordedAt: Date;
+  excludeId?: string;
+}): Promise<{ error: string } | null> {
+  const db = getDb();
+  const rows = await db
+    .select({
+      id: attendance.id,
+      type: attendance.type,
+      recordedAt: attendance.recordedAt,
+    })
+    .from(attendance)
+    .where(eq(attendance.employeeId, input.employeeId))
+    .orderBy(asc(attendance.recordedAt), asc(attendance.id));
+
+  const others = input.excludeId
+    ? rows.filter((r) => r.id !== input.excludeId)
+    : rows;
+  const t = input.recordedAt.getTime();
+
+  let prev: (typeof others)[number] | null = null;
+  let next: (typeof others)[number] | null = null;
+  for (const r of others) {
+    const rt = new Date(r.recordedAt).getTime();
+    if (rt <= t) prev = r;
+    else {
+      next = r;
+      break;
+    }
+  }
+
+  if (input.type === "giris") {
+    if (prev && prev.type !== "cikis") {
+      return { error: "Bu saatten önce zaten açık bir giriş var" };
+    }
+    if (next && next.type !== "cikis") {
+      return { error: "Bu saatten sonra zaten bir giriş var" };
+    }
+  } else {
+    if (!prev || prev.type !== "giris") {
+      return { error: "Çıkış eklemek için önceki kayıt giriş olmalı" };
+    }
+    if (next && next.type !== "giris") {
+      return { error: "Bu saatten sonra zaten bir çıkış var" };
+    }
+  }
+
+  return null;
+}
+
 export async function createManualAttendance(formData: FormData) {
   await requireAdmin();
   const db = getDb();
 
   const employeeId = String(formData.get("employeeId") || "");
   const type = String(formData.get("type") || "") as "giris" | "cikis";
-  const recordedAt = String(formData.get("recordedAt") || "");
+  const recordedAtRaw = String(formData.get("recordedAt") || "");
   const note = String(formData.get("note") || "").trim() || null;
 
-  if (!employeeId || !type || !recordedAt) {
+  if (!employeeId || !type || !recordedAtRaw) {
     return { error: "Eksik alanlar" };
   }
+  if (type !== "giris" && type !== "cikis") {
+    return { error: "Geçersiz tip" };
+  }
+
+  const recordedAt = new Date(recordedAtRaw);
+  if (Number.isNaN(recordedAt.getTime())) {
+    return { error: "Geçersiz zaman" };
+  }
+
+  const seqError = await assertAttendanceSequence({
+    employeeId,
+    type,
+    recordedAt,
+  });
+  if (seqError) return seqError;
 
   await db.insert(attendance).values({
     employeeId,
     type,
     method: "manuel",
-    recordedAt: new Date(recordedAt),
+    recordedAt,
     note,
   });
 
   revalidatePath("/mesai");
   revalidatePath("/");
+  revalidatePath("/raporlar");
   await writeAudit({
     action: "attendance.manual",
     entityType: "attendance",
     entityId: employeeId,
     summary: `Manuel ${type} kaydı`,
-    meta: { recordedAt, note },
+    meta: { recordedAt: recordedAtRaw, note },
+  });
+  return { success: true };
+}
+
+export async function createLateArrival(formData: FormData) {
+  await requireAdmin();
+  const db = getDb();
+
+  const employeeId = String(formData.get("employeeId") || "");
+  const recordedAtRaw = String(formData.get("recordedAt") || "");
+  const note =
+    String(formData.get("note") || "").trim() || "Manuel geç giriş";
+
+  if (!employeeId || !recordedAtRaw) {
+    return { error: "Eksik alanlar" };
+  }
+
+  const recordedAt = new Date(recordedAtRaw);
+  if (Number.isNaN(recordedAt.getTime())) {
+    return { error: "Geçersiz zaman" };
+  }
+
+  const workStart = await getWorkStartTime();
+  const dayKey = istanbulDateKey(recordedAt);
+  const startAt = workStartDateTime(dayKey, workStart);
+  if (recordedAt <= startAt) {
+    return {
+      error: `Geç giriş için saat mesai başlangıcından sonra olmalı (örn. ${workStart})`,
+    };
+  }
+
+  const seqError = await assertAttendanceSequence({
+    employeeId,
+    type: "giris",
+    recordedAt,
+  });
+  if (seqError) return seqError;
+
+  await db.insert(attendance).values({
+    employeeId,
+    type: "giris",
+    method: "manuel",
+    recordedAt,
+    note,
+  });
+
+  revalidatePath("/");
+  revalidatePath("/mesai");
+  revalidatePath("/raporlar");
+  await writeAudit({
+    action: "attendance.late_manual",
+    entityType: "attendance",
+    entityId: employeeId,
+    summary: "Manuel geç giriş kaydı",
+    meta: { recordedAt: recordedAtRaw, note, workStart },
+  });
+  return { success: true };
+}
+
+export async function updateAttendance(formData: FormData) {
+  await requireAdmin();
+  const db = getDb();
+
+  const id = String(formData.get("id") || "");
+  const type = String(formData.get("type") || "") as "giris" | "cikis";
+  const recordedAtRaw = String(formData.get("recordedAt") || "");
+  const note = String(formData.get("note") || "").trim() || null;
+
+  if (!id || !type || !recordedAtRaw) {
+    return { error: "Eksik alanlar" };
+  }
+  if (type !== "giris" && type !== "cikis") {
+    return { error: "Geçersiz tip" };
+  }
+
+  const recordedAt = new Date(recordedAtRaw);
+  if (Number.isNaN(recordedAt.getTime())) {
+    return { error: "Geçersiz zaman" };
+  }
+
+  const [row] = await db
+    .select()
+    .from(attendance)
+    .where(eq(attendance.id, id))
+    .limit(1);
+  if (!row) return { error: "Bulunamadı" };
+
+  const seqError = await assertAttendanceSequence({
+    employeeId: row.employeeId,
+    type,
+    recordedAt,
+    excludeId: id,
+  });
+  if (seqError) return seqError;
+
+  await db
+    .update(attendance)
+    .set({ type, recordedAt, note })
+    .where(eq(attendance.id, id));
+
+  revalidatePath("/mesai");
+  revalidatePath("/");
+  revalidatePath("/raporlar");
+  await writeAudit({
+    action: "attendance.update",
+    entityType: "attendance",
+    entityId: id,
+    summary: `Mesai kaydı güncellendi: ${type}`,
+    meta: {
+      employeeId: row.employeeId,
+      recordedAt: recordedAtRaw,
+      note,
+      previousType: row.type,
+      previousRecordedAt: row.recordedAt.toISOString(),
+    },
   });
   return { success: true };
 }

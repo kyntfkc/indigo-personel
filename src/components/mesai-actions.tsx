@@ -1,7 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { createManualAttendance, deleteAttendance } from "@/lib/actions/attendance";
+import {
+  createLateArrival,
+  createManualAttendance,
+  deleteAttendance,
+  updateAttendance,
+} from "@/lib/actions/attendance";
 import { toast } from "sonner";
 import { useState, useTransition } from "react";
 import {
@@ -12,6 +17,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+function localDateTimeValue(date = new Date()) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export function ManualAttendanceDialog({
   employees,
 }: {
@@ -20,14 +30,13 @@ export function ManualAttendanceDialog({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const field = "field";
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     const result = await createManualAttendance(new FormData(e.currentTarget));
     setLoading(false);
-    if (result.error) {
+    if ("error" in result && result.error) {
       toast.error(result.error);
       return;
     }
@@ -52,7 +61,7 @@ export function ManualAttendanceDialog({
         <form onSubmit={onSubmit} className="space-y-3">
           <div>
             <label className="mb-1 block text-sm">Personel</label>
-            <select name="employeeId" required className={field}>
+            <select name="employeeId" required className="field">
               <option value="">Seçin</option>
               {employees.map((e) => (
                 <option key={e.id} value={e.id}>
@@ -63,7 +72,7 @@ export function ManualAttendanceDialog({
           </div>
           <div>
             <label className="mb-1 block text-sm">Tip</label>
-            <select name="type" required className={field}>
+            <select name="type" required className="field">
               <option value="giris">Giriş</option>
               <option value="cikis">Çıkış</option>
             </select>
@@ -74,13 +83,174 @@ export function ManualAttendanceDialog({
               name="recordedAt"
               type="datetime-local"
               required
-              defaultValue={new Date().toISOString().slice(0, 16)}
-              className={field}
+              defaultValue={localDateTimeValue()}
+              className="field"
             />
           </div>
           <div>
             <label className="mb-1 block text-sm">Not</label>
-            <input name="note" className={field} />
+            <input name="note" className="field" />
+          </div>
+          <button type="submit" disabled={loading} className="btn-primary w-full">
+            Kaydet
+          </button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function LateArrivalDialog({
+  employees,
+}: {
+  employees: { id: string; firstName: string; lastName: string; active?: boolean }[];
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const activeEmployees = employees.filter((e) => e.active !== false);
+
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLoading(true);
+    const result = await createLateArrival(new FormData(e.currentTarget));
+    setLoading(false);
+    if ("error" in result && result.error) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success("Geç giriş eklendi");
+    setOpen(false);
+    router.refresh();
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger
+        render={
+          <button type="button" className="btn-outline !px-3 !py-1.5 !text-xs">
+            Geç kalan ekle
+          </button>
+        }
+      />
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Geç kalan ekle</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={onSubmit} className="space-y-3">
+          <div>
+            <label className="mb-1 block text-sm">Personel</label>
+            <select name="employeeId" required className="field">
+              <option value="">Seçin</option>
+              {activeEmployees.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.firstName} {e.lastName}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm">Giriş saati</label>
+            <input
+              name="recordedAt"
+              type="datetime-local"
+              required
+              defaultValue={localDateTimeValue()}
+              className="field"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm">Not</label>
+            <input
+              name="note"
+              placeholder="Manuel geç giriş"
+              className="field"
+            />
+          </div>
+          <button type="submit" disabled={loading} className="btn-primary w-full">
+            Kaydet
+          </button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function EditAttendanceButton({
+  record,
+}: {
+  record: {
+    id: string;
+    type: "giris" | "cikis";
+    recordedAt: Date | string;
+    note: string | null;
+  };
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLoading(true);
+    const result = await updateAttendance(new FormData(e.currentTarget));
+    setLoading(false);
+    if ("error" in result && result.error) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success("Kayıt güncellendi");
+    setOpen(false);
+    router.refresh();
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger
+        render={
+          <button
+            type="button"
+            className="tap shrink-0 rounded-full px-3 text-xs font-medium text-[var(--brand)] transition hover:bg-[var(--brand-soft)] active:bg-[var(--brand-soft)] sm:px-2 sm:py-1"
+          >
+            Düzenle
+          </button>
+        }
+      />
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Mesai kaydını düzenle</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={onSubmit} className="space-y-3">
+          <input type="hidden" name="id" value={record.id} />
+          <div>
+            <label className="mb-1 block text-sm">Tip</label>
+            <select
+              name="type"
+              required
+              defaultValue={record.type}
+              className="field"
+            >
+              <option value="giris">Giriş</option>
+              <option value="cikis">Çıkış</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm">Zaman</label>
+            <input
+              name="recordedAt"
+              type="datetime-local"
+              required
+              defaultValue={localDateTimeValue(new Date(record.recordedAt))}
+              className="field"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm">Not</label>
+            <input
+              name="note"
+              defaultValue={record.note ?? ""}
+              className="field"
+            />
           </div>
           <button type="submit" disabled={loading} className="btn-primary w-full">
             Kaydet

@@ -6,13 +6,14 @@ import { needsSetup } from "@/lib/actions/setup";
 import { AppShell } from "@/components/app-shell";
 import { getTodayAttendanceSummary } from "@/lib/actions/attendance";
 import { getPendingLeaveCount } from "@/lib/actions/leave";
-import { getEmployeeCount } from "@/lib/actions/employees";
+import { getEmployeeCount, listEmployees } from "@/lib/actions/employees";
 import { getLateArrivals } from "@/lib/actions/reports";
 import { istanbulDateKey } from "@/lib/istanbul-time";
 import { Clock, Users, CalendarDays, UserCheck } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import Link from "next/link";
+import { LateArrivalDialog } from "@/components/mesai-actions";
 
 export default async function DashboardPage() {
   try {
@@ -26,12 +27,14 @@ export default async function DashboardPage() {
   if (session.user.role !== "admin") redirect("/benim");
 
   const todayKey = istanbulDateKey();
-  const [summary, pendingLeave, employeeCount, lateToday] = await Promise.all([
-    getTodayAttendanceSummary(),
-    getPendingLeaveCount(),
-    getEmployeeCount(),
-    getLateArrivals(todayKey, todayKey),
-  ]);
+  const [summary, pendingLeave, employeeCount, lateToday, employees] =
+    await Promise.all([
+      getTodayAttendanceSummary(),
+      getPendingLeaveCount(),
+      getEmployeeCount(),
+      getLateArrivals(todayKey, todayKey),
+      listEmployees(),
+    ]);
 
   const cards = [
     {
@@ -96,14 +99,17 @@ export default async function DashboardPage() {
 
         <div className="grid gap-6 lg:grid-cols-2">
           <section className="panel">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between gap-2">
               <h2 className="font-semibold text-[var(--ink)]">Geç Kalanlar</h2>
-              <Link
-                href="/raporlar?tab=gec"
-                className="tap shrink-0 text-xs font-medium text-[var(--brand)] hover:underline"
-              >
-                Tümünü gör
-              </Link>
+              <div className="flex shrink-0 items-center gap-2">
+                <LateArrivalDialog employees={employees} />
+                <Link
+                  href="/raporlar?tab=gec"
+                  className="tap shrink-0 text-xs font-medium text-[var(--brand)] hover:underline"
+                >
+                  Tümünü gör
+                </Link>
+              </div>
             </div>
             {lateToday.rows.length === 0 ? (
               <p className="text-sm text-[var(--ink-muted)]">

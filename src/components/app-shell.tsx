@@ -102,8 +102,8 @@ export function AppShell({
   }, [open]);
 
   return (
-    <div className="min-h-dvh bg-[var(--bg-muted)]">
-      <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-white/90 backdrop-blur">
+    <div className="min-h-dvh bg-[var(--bg-muted)] print:min-h-0 print:bg-white">
+      <header className="sticky top-0 z-40 border-b border-[var(--border)] bg-white/90 backdrop-blur print:hidden">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 px-4">
           <div className="flex min-w-0 items-center gap-1 sm:gap-3">
             <button
@@ -140,10 +140,10 @@ export function AppShell({
             type="button"
             aria-hidden
             tabIndex={-1}
-            className="fixed inset-0 top-14 z-30 bg-black/20 lg:hidden"
+            className="fixed inset-0 top-14 z-30 bg-black/20 print:hidden lg:hidden"
             onClick={() => setOpen(false)}
           />
-          <div className="fixed inset-x-0 top-14 z-40 max-h-[calc(100dvh-3.5rem)] overflow-y-auto overscroll-contain border-b border-[var(--border)] bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
+          <div className="fixed inset-x-0 top-14 z-40 max-h-[calc(100dvh-3.5rem)] overflow-y-auto overscroll-contain border-b border-[var(--border)] bg-white pb-[env(safe-area-inset-bottom)] print:hidden lg:hidden">
             <Nav
               links={links}
               pathname={pathname}
@@ -154,8 +154,8 @@ export function AppShell({
         </>
       )}
 
-      <div className="mx-auto flex max-w-7xl gap-6 px-4 py-4 sm:py-6">
-        <aside className="hidden w-[220px] shrink-0 lg:block">
+      <div className="mx-auto flex max-w-7xl gap-6 px-4 py-4 sm:py-6 print:max-w-none print:gap-0 print:p-0">
+        <aside className="hidden w-[220px] shrink-0 print:hidden lg:block">
           <div className="panel sticky top-20 !p-3">
             <Nav
               links={links}

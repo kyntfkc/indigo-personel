@@ -8,6 +8,7 @@ import { listEmployees } from "@/lib/actions/employees";
 import {
   ManualAttendanceDialog,
   DeleteAttendanceButton,
+  EditAttendanceButton,
 } from "@/components/mesai-actions";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -127,7 +128,17 @@ export default async function MesaiPage({
                     </span>
                   </div>
                 </div>
-                <DeleteAttendanceButton id={r.id} />
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <EditAttendanceButton
+                    record={{
+                      id: r.id,
+                      type: r.type,
+                      recordedAt: r.recordedAt,
+                      note: r.note,
+                    }}
+                  />
+                  <DeleteAttendanceButton id={r.id} />
+                </div>
               </div>
             ))
           )}
@@ -183,7 +194,17 @@ export default async function MesaiPage({
                             : "Manuel"}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <DeleteAttendanceButton id={r.id} />
+                      <div className="inline-flex items-center justify-end gap-1">
+                        <EditAttendanceButton
+                          record={{
+                            id: r.id,
+                            type: r.type,
+                            recordedAt: r.recordedAt,
+                            note: r.note,
+                          }}
+                        />
+                        <DeleteAttendanceButton id={r.id} />
+                      </div>
                     </td>
                   </tr>
                 ))

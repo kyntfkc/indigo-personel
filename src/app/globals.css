@@ -153,3 +153,19 @@
       right center / 12px 100% no-repeat;
   background-attachment: local, local, scroll, scroll;
 }
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    background: #fff;
+  }
+
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+}

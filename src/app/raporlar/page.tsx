@@ -12,7 +12,9 @@ import {
   getMonthlyReport,
   listAuditLogs,
 } from "@/lib/actions/reports";
+import { listEmployees } from "@/lib/actions/employees";
 import { istanbulDateKey } from "@/lib/istanbul-time";
+import { LateArrivalDialog } from "@/components/mesai-actions";
 
 const tabs = [
   { id: "ozet", label: "Mesai özeti" },
@@ -52,7 +54,7 @@ export default async function RaporlarPage({
   const fromKey = params.from || monthStart;
   const toKey = params.to || todayKey;
 
-  const [report, late, absences, audits] = await Promise.all([
+  const [report, late, absences, audits, employees] = await Promise.all([
     tab === "ozet" ? getMonthlyReport(year, month) : Promise.resolve(null),
     tab === "gec" ? getLateArrivals(fromKey, toKey) : Promise.resolve(null),
     tab === "devamsizlik"
@@ -61,6 +63,7 @@ export default async function RaporlarPage({
     tab === "audit"
       ? listAuditLogs({ action: params.action || undefined })
       : Promise.resolve(null),
+    tab === "gec" ? listEmployees() : Promise.resolve([]),
   ]);
 
   return (
@@ -207,8 +210,11 @@ export default async function RaporlarPage({
 
         {tab === "gec" && late && (
           <div className="panel table-scroll !p-0">
-            <div className="border-b border-[var(--border)] px-4 py-3 text-sm text-[var(--ink-muted)]">
-              Mesai başlangıcı: {late.workStart} · {late.rows.length} kayıt
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] px-4 py-3 text-sm text-[var(--ink-muted)]">
+              <span>
+                Mesai başlangıcı: {late.workStart} · {late.rows.length} kayıt
+              </span>
+              <LateArrivalDialog employees={employees} />
             </div>
             <table className="w-full text-left text-sm">
               <thead className="border-b border-[var(--border)] bg-[var(--bg-muted)] text-[var(--ink-muted)]">
