@@ -7,6 +7,8 @@ import { AppShell } from "@/components/app-shell";
 import { getTodayAttendanceSummary } from "@/lib/actions/attendance";
 import { getPendingLeaveCount } from "@/lib/actions/leave";
 import { getEmployeeCount } from "@/lib/actions/employees";
+import { getLateArrivals } from "@/lib/actions/reports";
+import { istanbulDateKey } from "@/lib/istanbul-time";
 import { Clock, Users, CalendarDays, UserCheck } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -23,10 +25,12 @@ export default async function DashboardPage() {
   if (!session?.user) redirect("/giris");
   if (session.user.role !== "admin") redirect("/benim");
 
-  const [summary, pendingLeave, employeeCount] = await Promise.all([
+  const todayKey = istanbulDateKey();
+  const [summary, pendingLeave, employeeCount, lateToday] = await Promise.all([
     getTodayAttendanceSummary(),
     getPendingLeaveCount(),
     getEmployeeCount(),
+    getLateArrivals(todayKey, todayKey),
   ]);
 
   const cards = [
@@ -43,10 +47,10 @@ export default async function DashboardPage() {
       href: "/mesai",
     },
     {
-      label: "Açık Mesai",
-      value: summary.openCount,
+      label: "Geç Kalan",
+      value: lateToday.rows.length,
       icon: Clock,
-      href: "/mesai",
+      href: "/raporlar?tab=gec",
     },
     {
       label: "Bekleyen İzin",
@@ -93,30 +97,36 @@ export default async function DashboardPage() {
         <div className="grid gap-6 lg:grid-cols-2">
           <section className="panel">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-semibold text-[var(--ink)]">Açık Mesailer</h2>
-              <Link href="/kiosk" className="btn-primary !py-1.5 !text-xs">
-                Kapı QR
+              <h2 className="font-semibold text-[var(--ink)]">Geç Kalanlar</h2>
+              <Link
+                href="/raporlar?tab=gec"
+                className="tap shrink-0 text-xs font-medium text-[var(--brand)] hover:underline"
+              >
+                Tümünü gör
               </Link>
             </div>
-            {summary.open.length === 0 ? (
-              <p className="text-sm text-[var(--ink-muted)]">Şu an açık mesai yok.</p>
+            {lateToday.rows.length === 0 ? (
+              <p className="text-sm text-[var(--ink-muted)]">
+                Bugün geç giriş yok.
+              </p>
             ) : (
               <ul className="space-y-2">
-                {summary.open.map((row) => (
+                {lateToday.rows.map((row) => (
                   <li
-                    key={row.employeeId}
+                    key={`${row.employeeId}-${row.dayKey}`}
                     className="flex items-center justify-between gap-3 rounded-xl bg-[var(--bg-muted)] px-3 py-2"
                   >
                     <div className="min-w-0">
                       <p className="truncate font-medium text-[var(--ink)]">
-                        {row.firstName} {row.lastName}
+                        {row.name}
                       </p>
                       <p className="truncate text-xs text-[var(--ink-muted)]">
-                        {row.department || "—"}
+                        {row.department || "—"} ·{" "}
+                        {format(new Date(row.checkInAt), "HH:mm")}
                       </p>
                     </div>
-                    <span className="shrink-0 text-sm text-[var(--brand)]">
-                      {format(new Date(row.recordedAt), "HH:mm")}
+                    <span className="shrink-0 rounded-full bg-orange-50 px-2.5 py-0.5 text-xs font-medium text-orange-700">
+                      {row.lateMinutes} dk
                     </span>
                   </li>
                 ))}
@@ -125,7 +135,15 @@ export default async function DashboardPage() {
           </section>
 
           <section className="panel">
-            <h2 className="mb-4 font-semibold text-[var(--ink)]">Bugünkü Kayıtlar</h2>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-semibold text-[var(--ink)]">Bugünkü Kayıtlar</h2>
+              <Link
+                href="/mesai"
+                className="tap shrink-0 text-xs font-medium text-[var(--brand)] hover:underline"
+              >
+                Tümünü gör
+              </Link>
+            </div>
             {summary.records.length === 0 ? (
               <p className="text-sm text-[var(--ink-muted)]">Henüz kayıt yok.</p>
             ) : (
