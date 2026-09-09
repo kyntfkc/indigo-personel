@@ -4,7 +4,9 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { listLeaveRequests } from "@/lib/actions/leave";
+import { listEmployees } from "@/lib/actions/employees";
 import { LeaveReviewButtons } from "@/components/leave-review-buttons";
+import { CreateAdminLeaveDialog } from "@/components/admin-leave-dialog";
 import { leaveStatusLabels, leaveTypeLabels } from "@/lib/utils-app";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -19,7 +21,10 @@ export default async function IzinPage({
   if (!session?.user || session.user.role !== "admin") redirect("/giris");
 
   const { status } = await searchParams;
-  const rows = await listLeaveRequests(status || undefined);
+  const [rows, employees] = await Promise.all([
+    listLeaveRequests(status || undefined),
+    listEmployees(),
+  ]);
 
   const tabs = [
     { value: "", label: "Tümü" },
@@ -31,9 +36,14 @@ export default async function IzinPage({
   return (
     <AppShell role="admin" userName={session.user.name || session.user.email}>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold">İzin Yönetimi</h1>
-          <p className="text-sm text-[var(--ink-muted)]">Talepleri onaylayın veya reddedin</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold">İzin Yönetimi</h1>
+            <p className="text-sm text-[var(--ink-muted)]">
+              Manuel izin ekleyin veya talepleri onaylayın
+            </p>
+          </div>
+          <CreateAdminLeaveDialog employees={employees} />
         </div>
 
         <div className="flex flex-wrap gap-2">

@@ -61,6 +61,79 @@ export async function createLeaveRequest(formData: FormData) {
   return { success: true };
 }
 
+/** Admin personel adına doğrudan onaylı izin girer */
+export async function createAdminLeave(formData: FormData) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "admin") {
+    return { error: "Yetkisiz" };
+  }
+
+  const employeeId = String(formData.get("employeeId") || "");
+  const type = String(formData.get("type") || "") as
+    | "yillik"
+    | "hastalik"
+    | "mazeret";
+  const startDate = String(formData.get("startDate") || "");
+  const endDate = String(formData.get("endDate") || "");
+  const note = String(formData.get("note") || "").trim() || null;
+
+  if (!employeeId || !type || !startDate || !endDate) {
+    return { error: "Eksik alanlar" };
+  }
+  if (!["yillik", "hastalik", "mazeret"].includes(type)) {
+    return { error: "Geçersiz izin tipi" };
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+    return { error: "Geçersiz tarih" };
+  }
+  if (endDate < startDate) {
+    return { error: "Bitiş tarihi başlangıçtan önce olamaz" };
+  }
+
+  const db = getDb();
+  const [employee] = await db
+    .select()
+    .from(employees)
+    .where(eq(employees.id, employeeId))
+    .limit(1);
+  if (!employee) return { error: "Personel bulunamadı" };
+  if (!employee.active) return { error: "Personel pasif durumda" };
+
+  const check = await assertLeaveAllowed({
+    employeeId,
+    startDate,
+    endDate,
+    type,
+  });
+  if (!check.ok) return { error: check.error };
+
+  const [row] = await db
+    .insert(leaveRequests)
+    .values({
+      employeeId,
+      type,
+      startDate,
+      endDate,
+      note,
+      status: "onaylandi",
+      reviewedBy: session.user.id,
+      reviewedAt: new Date(),
+    })
+    .returning();
+
+  revalidateLeavePaths();
+
+  await writeAudit({
+    action: "leave.manual",
+    entityType: "leave_request",
+    entityId: row.id,
+    summary: `Manuel izin: ${employee.firstName} ${employee.lastName} ${startDate}–${endDate} (${type})`,
+    meta: { employeeId, type, startDate, endDate, note },
+  });
+
+  return { success: true as const };
+}
+
 export async function listLeaveRequests(status?: string) {
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
