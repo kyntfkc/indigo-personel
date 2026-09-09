@@ -46,6 +46,47 @@ export function overtimeHoursForDay(
   return isWeekend(dayKey) ? settings.weekend : settings.weekday;
 }
 
+/** datetime-local (YYYY-MM-DDTHH:mm) değerini İstanbul saati olarak Date'e çevir */
+export function parseIstanbulDateTimeLocal(raw: string): Date | null {
+  const trimmed = raw.trim();
+  const m = trimmed.match(
+    /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/
+  );
+  if (m) {
+    const [, day, hh, mm, ss] = m;
+    return new Date(`${day}T${hh}:${mm}:${ss ?? "00"}+03:00`);
+  }
+  const fallback = new Date(trimmed);
+  return Number.isNaN(fallback.getTime()) ? null : fallback;
+}
+
+/** Date'i datetime-local input değeri olarak İstanbul saatinde üret */
+export function toIstanbulDateTimeLocalValue(date: Date | string = new Date()) {
+  const d = new Date(date);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Istanbul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(d);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? "00";
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
+}
+
+/** İstanbul saatinde HH:mm */
+export function formatIstanbulHm(date: Date | string) {
+  return new Intl.DateTimeFormat("tr-TR", {
+    timeZone: "Europe/Istanbul",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(new Date(date));
+}
+
 /** 75 → "1 sa 15 dk", 45 → "45 dk" */
 export function formatLateMinutes(totalMinutes: number) {
   const mins = Math.max(0, Math.round(totalMinutes));

@@ -8,7 +8,7 @@ import { getTodayAttendanceSummary } from "@/lib/actions/attendance";
 import { getPendingLeaveCount } from "@/lib/actions/leave";
 import { getEmployeeCount, listEmployees } from "@/lib/actions/employees";
 import { getLateArrivals } from "@/lib/actions/reports";
-import { formatLateMinutes, istanbulDateKey } from "@/lib/istanbul-time";
+import { formatIstanbulHm, formatLateMinutes, istanbulDateKey } from "@/lib/istanbul-time";
 import { Clock, Users, CalendarDays, UserCheck } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -128,7 +128,7 @@ export default async function DashboardPage() {
                       </p>
                       <p className="truncate text-xs text-[var(--ink-muted)]">
                         {row.department || "—"} ·{" "}
-                        {format(new Date(row.checkInAt), "HH:mm")}
+                        {formatIstanbulHm(row.checkInAt)}
                       </p>
                     </div>
                     <span className="shrink-0 rounded-full bg-orange-50 px-2.5 py-0.5 text-xs font-medium text-orange-700">
@@ -159,7 +159,7 @@ export default async function DashboardPage() {
                         {row.firstName} {row.lastName}
                       </p>
                       <p className="text-xs text-[var(--ink-muted)]">
-                        {format(new Date(row.recordedAt), "HH:mm")}
+                        {formatIstanbulHm(row.recordedAt)}
                       </p>
                     </div>
                     <span

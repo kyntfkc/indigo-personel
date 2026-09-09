@@ -10,6 +10,7 @@ import {
   istanbulDateKey,
   istanbulDayBounds,
   istanbulEighteenHundred,
+  parseIstanbulDateTimeLocal,
   previousIstanbulDateKey,
 } from "@/lib/istanbul-time";
 import { writeAudit } from "@/lib/audit";
@@ -319,8 +320,8 @@ export async function createManualAttendance(formData: FormData) {
     return { error: "Geçersiz tip" };
   }
 
-  const recordedAt = new Date(recordedAtRaw);
-  if (Number.isNaN(recordedAt.getTime())) {
+  const recordedAt = parseIstanbulDateTimeLocal(recordedAtRaw);
+  if (!recordedAt) {
     return { error: "Geçersiz zaman" };
   }
 
@@ -365,8 +366,8 @@ export async function createLateArrival(formData: FormData) {
     return { error: "Eksik alanlar" };
   }
 
-  const recordedAt = new Date(recordedAtRaw);
-  if (Number.isNaN(recordedAt.getTime())) {
+  const recordedAt = parseIstanbulDateTimeLocal(recordedAtRaw);
+  if (!recordedAt) {
     return { error: "Geçersiz zaman" };
   }
 
@@ -423,8 +424,8 @@ export async function updateAttendance(formData: FormData) {
     return { error: "Geçersiz tip" };
   }
 
-  const recordedAt = new Date(recordedAtRaw);
-  if (Number.isNaN(recordedAt.getTime())) {
+  const recordedAt = parseIstanbulDateTimeLocal(recordedAtRaw);
+  if (!recordedAt) {
     return { error: "Geçersiz zaman" };
   }
 

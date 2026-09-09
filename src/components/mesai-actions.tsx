@@ -7,6 +7,7 @@ import {
   deleteAttendance,
   updateAttendance,
 } from "@/lib/actions/attendance";
+import { toIstanbulDateTimeLocalValue } from "@/lib/istanbul-time";
 import { toast } from "sonner";
 import { useState, useTransition } from "react";
 import {
@@ -16,11 +17,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-
-function localDateTimeValue(date = new Date()) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
 
 export function ManualAttendanceDialog({
   employees,
@@ -83,7 +79,7 @@ export function ManualAttendanceDialog({
               name="recordedAt"
               type="datetime-local"
               required
-              defaultValue={localDateTimeValue()}
+              defaultValue={toIstanbulDateTimeLocalValue()}
               className="field"
             />
           </div>
@@ -155,7 +151,7 @@ export function LateArrivalDialog({
               name="recordedAt"
               type="datetime-local"
               required
-              defaultValue={localDateTimeValue()}
+              defaultValue={toIstanbulDateTimeLocalValue()}
               className="field"
             />
           </div>
@@ -240,7 +236,7 @@ export function EditAttendanceButton({
               name="recordedAt"
               type="datetime-local"
               required
-              defaultValue={localDateTimeValue(new Date(record.recordedAt))}
+              defaultValue={toIstanbulDateTimeLocalValue(new Date(record.recordedAt))}
               className="field"
             />
           </div>
