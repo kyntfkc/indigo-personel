@@ -56,10 +56,6 @@ export type CalendarHoliday = {
   name: string;
 };
 
-function initials(first: string, last: string) {
-  return `${first.charAt(0)}${last.charAt(0)}`.toUpperCase();
-}
-
 function dateInRange(day: Date, start: string, end: string) {
   const key = format(day, "yyyy-MM-dd");
   return key >= start && key <= end;
@@ -368,7 +364,7 @@ export function LeaveCalendar({
                 disabled={frozen}
                 title={holidayName || undefined}
                 onClick={() => onDayClick(day)}
-                className={`min-h-[88px] rounded-xl border p-1.5 text-left transition ${
+                className={`min-h-[110px] rounded-xl border p-1.5 text-left transition ${
                   frozen
                     ? "cursor-not-allowed border-dashed border-gray-300 bg-gray-100 opacity-80"
                     : selected
@@ -395,23 +391,23 @@ export function LeaveCalendar({
                     {holidayName}
                   </p>
                 )}
-                <div className="flex flex-wrap gap-0.5">
-                  {dayLeaves.slice(0, 3).map((l) => (
+                <div className="flex flex-col gap-0.5">
+                  {dayLeaves.slice(0, 4).map((l) => (
                     <span
                       key={l.id}
                       title={`${l.firstName} ${l.lastName}`}
-                      className={`rounded px-1 text-[10px] font-medium ${
+                      className={`block w-full rounded px-1 py-0.5 text-[10px] leading-tight font-medium ${
                         l.status === "onaylandi"
                           ? "bg-emerald-100 text-emerald-800"
                           : "bg-amber-100 text-amber-800"
                       }`}
                     >
-                      {initials(l.firstName, l.lastName)}
+                      {l.firstName} {l.lastName}
                     </span>
                   ))}
-                  {dayLeaves.length > 3 && (
+                  {dayLeaves.length > 4 && (
                     <span className="text-[10px] text-[var(--ink-muted)]">
-                      +{dayLeaves.length - 3}
+                      +{dayLeaves.length - 4}
                     </span>
                   )}
                 </div>
@@ -435,8 +431,8 @@ export function LeaveCalendar({
           </span>
         </div>
 
-        {/* Mobilde isimler ve tatil adları yalnızca burada okunabilir. */}
-        <div className="mt-4 border-t border-[var(--border)] pt-4 lg:hidden">
+        {/* İsimler ve tatil adları — ay özeti (tüm ekranlarda) */}
+        <div className="mt-4 border-t border-[var(--border)] pt-4">
           <h3 className="mb-2 text-sm font-semibold capitalize">
             {format(month, "MMMM", { locale: tr })} ayrıntıları
           </h3>
@@ -454,7 +450,7 @@ export function LeaveCalendar({
                   >
                     <span className="mt-1.5 size-2 shrink-0 rounded-full bg-[var(--brand)]" />
                     <div className="min-w-0">
-                      <p className="font-medium text-[var(--ink)]">
+                      <p className="font-medium break-words text-[var(--ink)]">
                         {entry.holiday.name}
                       </p>
                       <p className="text-xs text-[var(--ink-muted)]">
@@ -477,7 +473,7 @@ export function LeaveCalendar({
                       }`}
                     />
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-[var(--ink)]">
+                      <p className="font-medium break-words text-[var(--ink)]">
                         {entry.leave.firstName} {entry.leave.lastName}
                       </p>
                       <p className="text-xs text-[var(--ink-muted)]">
